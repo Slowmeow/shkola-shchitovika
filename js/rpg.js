@@ -393,7 +393,7 @@
     };
     if (!sp) { setTimeout(daily, 600); return; }
     const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (S.settings.splash === false || reduce) { sp.remove(); setTimeout(daily, 600); return; }
+    if (S.settings.splash === false || reduce || S.env !== 'pages') { sp.remove(); setTimeout(daily, 600); return; }
     const info = R.info();
     const sub = S.$('#splashSub');
     let closed = false;

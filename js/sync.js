@@ -162,15 +162,20 @@
     ].join('\n');
     const base = `https://github.com/${S.REPO}/issues/new?labels=razbor&title=${encodeURIComponent('Разбор: ' + req.title)}`;
     let url = base + '&body=' + encodeURIComponent(bodyText);
-    if (url.length > 7800) {
-      const ok = await S.copy(bodyText, 'Текст заявки скопирован');
-      if (!ok) return false;
-      url = base + '&body=' + encodeURIComponent('Вставь сюда скопированный текст заявки (долгое нажатие → «Вставить»).\n\n');
-      S.toast('Заявка длинная: текст в буфере — вставь его на GitHub');
-    }
-    S.openExternal(url);
-    S.closeSheet();
-    remember(id, req, 'github');
+    const long = url.length > 7800;
+    if (long) url = base + '&body=' + encodeURIComponent('Вставь сюда скопированный текст заявки (долгое нажатие → «Вставить»).\n\n');
+    /* последний шаг — настоящая ссылка: так GitHub откроется на любом телефоне и внутри Claude */
+    S.sheet(`${S.icon('github')} Заявка готова`, `<div class="stack">
+      <div class="flash ok">Осталось подтвердить на GitHub: откроется страница с готовой заявкой — нажми зелёную кнопку <b>Create</b>. Нужен вход в аккаунт GitHub.</div>
+      ${long ? `<button class="btn block" type="button" data-cptext>${S.icon('copy')}1. Скопировать текст заявки</button>` : ''}
+      <a class="btn primary block" href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-ghgo>${S.icon('github')}${long ? '2. ' : ''}Открыть GitHub</a>
+      <p class="small muted">Потом напиши Claude в чате: «Проверь разборы». Ответ появится в разделе «Разборы».</p></div>`, {
+      mount(b) {
+        const cp = b.querySelector('[data-cptext]');
+        if (cp) cp.addEventListener('click', () => S.copy(bodyText, 'Текст заявки скопирован'));
+        b.querySelector('[data-ghgo]').addEventListener('click', () => { remember(id, req, 'github'); setTimeout(S.closeSheet, 400); });
+      }
+    });
     return true;
   };
   function remember(id, req, via) {

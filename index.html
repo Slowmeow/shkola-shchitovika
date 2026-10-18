@@ -22,11 +22,11 @@
 <meta property="og:url" content="https://slowmeow.github.io/shkola-shchitovika/">
 <link rel="preload" href="fonts/ps2p-cyr.woff2" as="font" type="font/woff2" crossorigin>
 <script>window.SHK_ENV='pages';try{var t=localStorage.getItem('shk:theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
-<style>
+<style>@font-face{font-family:"Press Start 2P";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/ps2p-cyr.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:"Press Start 2P";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/ps2p-lat.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+
 /* Layout: GitHub-style app shell — dark top header with HUD (level, XP strip), one content column, bottom tab bar on phones, left side nav from 1012px.
    Identity: GitHub Primer surfaces and type; game accents only where progress lives — gold XP, purple level, rarity colours, pixel font for numbers. */
-@font-face{font-family:"Press Start 2P";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/ps2p-cyr.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
-@font-face{font-family:"Press Start 2P";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/ps2p-lat.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 :root{
   --bg:#ffffff; --bg-subtle:#f6f8fa; --bg-inset:#f6f8fa; --bg-muted:#eff2f5; --overlay:#ffffff;
   --fg:#1f2328; --fg-muted:#59636e; --fg-subtle:#6e7781;
@@ -117,9 +117,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 /* ---------- шапка, HUD, навигация ---------- */
-.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:6px;background:var(--hdr-bg);color:var(--hdr-fg);
-  min-height:calc(var(--hdr) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);
-  padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;display:flex;align-items:center;gap:6px;background:var(--hdr-bg);color:var(--hdr-fg);
+  min-height:var(--hdr);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .brand{display:flex;align-items:center;gap:10px;color:var(--hdr-fg);min-width:0;padding:4px 6px 4px 2px;border-radius:6px}
 .brand:hover{color:var(--hdr-muted)}
 .brand b{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -137,7 +136,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .xpstrip{position:sticky;top:calc(var(--hdr) + env(safe-area-inset-top,0px));z-index:29;height:3px;background:var(--hdr-bg)}
 .xpstrip>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--xp-a),var(--xp-b));box-shadow:0 0 8px var(--xp-b);transition:width .6s cubic-bezier(.2,.8,.2,1)}
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg);border-top:1px solid var(--border);
-  padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:var(--tabh);font-size:11px;font-weight:500;color:var(--fg-muted);position:relative;min-width:0}
 .tab .ic{width:22px;height:22px}
 .tab span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px}
@@ -648,6 +647,8 @@ button.issue{border:0;background:none;width:100%;text-align:left;cursor:pointer}
 .switch[aria-checked="true"]{background:var(--success-em);border-color:var(--success-em)}
 .switch[aria-checked="true"]::after{transform:translateX(18px)}
 .codebox{font-family:var(--font-mono);font-size:12px;word-break:break-all;background:var(--bg-subtle);border:1px solid var(--border-muted);border-radius:6px;padding:10px;max-height:160px;overflow:auto}
+
+.topbar{top:0;padding-top:env(safe-area-inset-top,0px);min-height:calc(var(--hdr) + env(safe-area-inset-top,0px))}
 </style>
 </head>
 <body>
@@ -677,26 +678,26 @@ button.issue{border:0;background:none;width:100%;text-align:left;cursor:pointer}
   </div>
 </div>
 
-<script src="js/core.js?v=3ddfbddf17"></script>
-<script src="js/rpg.js?v=3ddfbddf17"></script>
-<script src="js/svg.js?v=3ddfbddf17"></script>
-<script src="js/data-glossary.js?v=3ddfbddf17"></script>
-<script src="js/data-formulas.js?v=3ddfbddf17"></script>
-<script src="js/data-devices.js?v=3ddfbddf17"></script>
-<script src="js/data-norms.js?v=3ddfbddf17"></script>
-<script src="js/data-tables.js?v=3ddfbddf17"></script>
-<script src="js/course-1.js?v=3ddfbddf17"></script>
-<script src="js/course-2.js?v=3ddfbddf17"></script>
-<script src="js/course-3.js?v=3ddfbddf17"></script>
-<script src="js/course-4.js?v=3ddfbddf17"></script>
-<script src="js/engine.js?v=3ddfbddf17"></script>
-<script src="js/render-panel.js?v=3ddfbddf17"></script>
-<script src="js/projects.js?v=3ddfbddf17"></script>
-<script src="js/control.js?v=3ddfbddf17"></script>
-<script src="js/games.js?v=3ddfbddf17"></script>
-<script src="js/photos.js?v=3ddfbddf17"></script>
-<script src="js/ai.js?v=3ddfbddf17"></script>
-<script src="js/sync.js?v=3ddfbddf17"></script>
-<script src="js/app.js?v=3ddfbddf17"></script>
+<script src="js/core.js?v=c011af65ac"></script>
+<script src="js/rpg.js?v=c011af65ac"></script>
+<script src="js/svg.js?v=c011af65ac"></script>
+<script src="js/data-glossary.js?v=c011af65ac"></script>
+<script src="js/data-formulas.js?v=c011af65ac"></script>
+<script src="js/data-devices.js?v=c011af65ac"></script>
+<script src="js/data-norms.js?v=c011af65ac"></script>
+<script src="js/data-tables.js?v=c011af65ac"></script>
+<script src="js/course-1.js?v=c011af65ac"></script>
+<script src="js/course-2.js?v=c011af65ac"></script>
+<script src="js/course-3.js?v=c011af65ac"></script>
+<script src="js/course-4.js?v=c011af65ac"></script>
+<script src="js/engine.js?v=c011af65ac"></script>
+<script src="js/render-panel.js?v=c011af65ac"></script>
+<script src="js/projects.js?v=c011af65ac"></script>
+<script src="js/control.js?v=c011af65ac"></script>
+<script src="js/games.js?v=c011af65ac"></script>
+<script src="js/photos.js?v=c011af65ac"></script>
+<script src="js/ai.js?v=c011af65ac"></script>
+<script src="js/sync.js?v=c011af65ac"></script>
+<script src="js/app.js?v=c011af65ac"></script>
 </body>
 </html>

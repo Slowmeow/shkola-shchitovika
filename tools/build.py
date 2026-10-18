@@ -32,6 +32,9 @@ if not m:
     raise SystemExit('В app.html нет <style>')
 head_part = app[:m.start()]
 style = m.group(1)
+# на сайте шрифт свой (работает офлайн), а шапка заходит под системную полосу телефона
+style = ((ROOT / 'tools' / 'local-fonts.css').read_text(encoding='utf-8') + style
+         + '\n.topbar{top:0;padding-top:env(safe-area-inset-top,0px);min-height:calc(var(--hdr) + env(safe-area-inset-top,0px))}\n')
 body = app[m.end():].strip()
 title = re.search(r'<title>(.*?)</title>', head_part).group(1)
 desc = re.search(r'<meta name="description" content="([^"]*)">', head_part).group(1)
