@@ -1,5 +1,5 @@
 /* Школа щитовика — офлайн-режим. VERSION и ASSETS обновляет tools/build.py */
-const VERSION = 'c011af65ac';
+const VERSION = '27645d334e';
 const CACHE = 'shk-' + VERSION;
 const ASSETS = ["./", "index.html", "manifest.webmanifest", "js/ai.js", "js/app.js", "js/control.js", "js/core.js", "js/course-1.js", "js/course-2.js", "js/course-3.js", "js/course-4.js", "js/data-devices.js", "js/data-formulas.js", "js/data-glossary.js", "js/data-norms.js", "js/data-tables.js", "js/engine.js", "js/games.js", "js/photos.js", "js/projects.js", "js/render-panel.js", "js/rpg.js", "js/svg.js", "js/sync.js", "img/1.webp", "img/2.webp", "img/3.webp", "img/4.webp", "img/5.webp", "fonts/ps2p-cyr.woff2", "fonts/ps2p-lat.woff2", "icons/apple-touch-icon.png", "icons/favicon-32.png", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-192.png", "icons/maskable-512.png", "icons/favicon.svg", "razbory/index.json"];
 

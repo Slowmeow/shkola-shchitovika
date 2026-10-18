@@ -223,7 +223,7 @@
       else if (kind === 'tap') tone(880, 0, 0.04, 'square', 0.02);
     } catch (e) { /* без звука */ }
   };
-  R.buzz = (p) => { if (S.settings.vibro && navigator.vibrate) { try { navigator.vibrate(p); } catch (e) { /* ignore */ } } };
+  R.buzz = (p) => { if (gestured && S.settings.vibro && navigator.vibrate) { try { navigator.vibrate(p); } catch (e) { /* ignore */ } } };
 
   /* ---------- всплывашки ---------- */
   function flushPop() {
