@@ -1,0 +1,71 @@
+// Проверка содержимого: уроки, тесты, ссылки, термины, формулы, проекты, достижения.
+// Запуск: node tools/test-content.cjs
+'use strict';
+const S = require('./load-app.cjs')(undefined, ['core', 'rpg', 'svg', 'data-glossary', 'data-formulas', 'data-devices', 'data-norms', 'data-tables', 'course-1', 'course-2', 'course-3', 'course-4', 'engine', 'render-panel', 'projects', 'control', 'games', 'photos', 'sync']);
+let n = 0;
+const bad = (m) => { n++; if (n <= 60) console.log('✗ ' + m); };
+const views = new Set(['home', 'course', 'lesson', 'ref', 'formula', 'device', 'norm', 'practice', 'game', 'project', 'photos', 'builder', 'claude', 'profile', 'ai']);
+const lessons = S.course.reduce((a, m) => a.concat(m.lessons.map((l) => Object.assign({ m: m.id }, l))), []);
+const ids = new Set();
+lessons.forEach((l) => { if (ids.has(l.id)) bad('урок с повтором id ' + l.id); ids.add(l.id); });
+const mids = new Set(); S.course.forEach((m) => { if (mids.has(m.id)) bad('модуль с повтором id ' + m.id); mids.add(m.id); });
+const gl = new Set(S.glossary.map((g) => g.id));
+if (gl.size !== S.glossary.length) bad('повторы id в словаре');
+const fm = new Set(S.formulas.map((f) => f.id));
+const dv = new Set(S.devices.map((d) => d.id));
+const nr = new Set(S.norms.map((x) => x.id));
+const pr = new Set(S.projects.map((p) => p.id));
+const route = (r, where) => {
+  const i = r.indexOf('.'); const v = i < 0 ? r : r.slice(0, i); const a = i < 0 ? '' : r.slice(i + 1);
+  if (!views.has(v)) return bad(`${where}: нет раздела «${r}»`);
+  if (v === 'lesson' && !ids.has(a)) bad(`${where}: нет урока «${a}»`);
+  if (v === 'formula' && !fm.has(a)) bad(`${where}: нет формулы «${a}»`);
+  if (v === 'device' && !dv.has(a)) bad(`${where}: нет аппарата «${a}»`);
+  if (v === 'norm' && !nr.has(a)) bad(`${where}: нет нормы «${a}»`);
+  if (v === 'project' && !pr.has(a)) bad(`${where}: нет проекта «${a}»`);
+  if (v === 'game' && !S.games[a]) bad(`${where}: нет игры «${a}»`);
+  if (v === 'ref' && a && !['formulas', 'devices', 'tables', 'norms', 'symbols', 'glossary'].includes(a)) bad(`${where}: нет раздела справочника «${a}»`);
+};
+const scanHTML = (html, where) => {
+  html = String(html || '');
+  for (const m of html.matchAll(/data-go="([^"]+)"/g)) route(m[1], where);
+  for (const m of html.matchAll(/data-term="([^"]+)"/g)) if (!gl.has(m[1])) bad(`${where}: нет термина «${m[1]}»`);
+  for (const m of html.matchAll(/data-ill="([^"]+)"/g)) if (!S.ill[m[1]]) bad(`${where}: нет иллюстрации «${m[1]}»`);
+  for (const m of html.matchAll(/data-calc="([^"]+)"/g)) if (!fm.has(m[1])) bad(`${where}: нет калькулятора «${m[1]}»`);
+  if (/\bundefined\b|\bNaN\b|\[object Object\]/.test(html)) bad(`${where}: в тексте undefined/NaN`);
+  const open = (html.match(/<(div|p|ul|ol|li|section|figure|table|b|i|strong)\b/g) || []).length, close = (html.match(/<\/(div|p|ul|ol|li|section|figure|table|b|i|strong)>/g) || []).length;
+  if (open !== close) bad(`${where}: несбалансированные теги (${open} открыто, ${close} закрыто)`);
+};
+lessons.forEach((l) => {
+  const html = typeof l.html === 'function' ? l.html() : l.html;
+  if (!html || html.length < 300) bad(`урок ${l.id}: слишком короткий текст`);
+  scanHTML(html, 'урок ' + l.id);
+  if (!(l.min > 0)) bad(`урок ${l.id}: нет времени чтения`);
+  (l.quiz || []).forEach((q, i) => {
+    if (!Array.isArray(q.a) || q.a.length < 2) bad(`урок ${l.id} вопрос ${i + 1}: мало вариантов`);
+    if (!(q.c >= 0 && q.c < q.a.length)) bad(`урок ${l.id} вопрос ${i + 1}: верный ответ вне вариантов`);
+    if (new Set(q.a).size !== q.a.length) bad(`урок ${l.id} вопрос ${i + 1}: одинаковые варианты`);
+    if (!q.e) bad(`урок ${l.id} вопрос ${i + 1}: нет пояснения`);
+  });
+  if (!l.quiz || !l.quiz.length) bad(`урок ${l.id}: нет теста`);
+});
+S.glossary.forEach((g) => { if (g.go) route(g.go, 'термин ' + g.id); scanHTML(g.def, 'термин ' + g.id); if (!g.def) bad('термин без определения ' + g.id); });
+S.formulas.forEach((f) => {
+  if (f.lesson && !ids.has(f.lesson)) bad(`формула ${f.id}: нет урока ${f.lesson}`);
+  try { const v = {}; f.calc.inputs.forEach((i) => { v[i.k] = i.options ? String(i.v) : Number(i.v); }); const r = f.calc.run(v); if (!Array.isArray(r) || !r.length) bad(`формула ${f.id}: калькулятор ничего не вернул`); r.forEach((x) => { if (/NaN|undefined|Infinity/.test(String(x.v))) bad(`формула ${f.id}: ${x.l} = ${x.v}`); }); } catch (e) { bad(`формула ${f.id}: калькулятор упал ${e.message}`); }
+});
+S.devices.forEach((d) => { if (d.lesson && !ids.has(d.lesson)) bad(`аппарат ${d.id}: нет урока ${d.lesson}`); scanHTML(d.what, 'аппарат ' + d.id); });
+S.projects.forEach((p) => { scanHTML(p.intro, 'проект ' + p.id); if (p.control && !S.control.SCHEMES[p.control]) bad(`проект ${p.id}: нет схемы ${p.control}`); });
+S.tables.forEach((t) => { (t.rows || []).forEach((r, i) => { if (r.length !== t.head.length) bad(`таблица ${t.id} строка ${i + 1}: ${r.length} ячеек при ${t.head.length} столбцах`); }); });
+S.photos.forEach((ph) => ph.pins.forEach((p, i) => { if (!(p.x >= 0 && p.x <= ph.w && p.y >= 0 && p.y <= ph.h)) bad(`фото ${ph.id} метка ${i + 1} вне снимка`); if (!p.t || !p.d) bad(`фото ${ph.id} метка ${i + 1} без текста`); }));
+// игровой слой
+const ach = S.rpg.ACH; if (new Set(ach.map((a) => a.id)).size !== ach.length) bad('повтор id достижений');
+ach.forEach((a) => { if (!S.icons[a.ic]) bad(`достижение ${a.id}: нет иконки ${a.ic}`); });
+S.course.forEach((m) => { if (!ach.find((a) => a.id === m.id)) bad(`модуль ${m.id} без достижения`); });
+for (let L = 1; L < 40; L++) if (S.rpg.levelOf(S.rpg.need(L)) !== L || S.rpg.levelOf(S.rpg.need(L + 1) - 1) !== L) bad('ошибка в формуле уровней на ' + L);
+// разборы: стартовый файл читается
+const rz = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'razbory', 'index.json'), 'utf8'));
+(rz.items || []).forEach((x) => { scanHTML(S.md(x.md), 'разбор ' + x.id); (x.links || []).forEach((l) => route(l[1], 'разбор ' + x.id)); });
+console.log(`Уроков ${lessons.length}, вопросов ${lessons.reduce((s, l) => s + (l.quiz || []).length, 0)}, терминов ${S.glossary.length}, формул ${S.formulas.length}, аппаратов ${S.devices.length}, таблиц ${S.tables.length}, достижений ${ach.length}.`);
+console.log(n ? `Ошибок: ${n}` : 'Ошибок: 0');
+process.exit(n ? 1 : 0);

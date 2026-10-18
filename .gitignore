@@ -1,0 +1,5 @@
+.claude-inbox-*.json
+.claude-reply.md
+node_modules/
+__pycache__/
+*.tmp
