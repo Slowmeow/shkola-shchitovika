@@ -122,6 +122,32 @@
   const allProg = () => S.program.reduce((a, t) => a.concat(t.modules.reduce((b, m) => b.concat(m.lessons), [])), []);
   const status = (id) => S.reworked[id] ? 'ready' : lessonExists(id) ? 'old' : 'new';
   S.programStatus = status;
+
+  /* Колода Anki: одно имя подколоды для сайта и для генератора (tools/export-cards.cjs).
+     Номера в названиях держат порядок курса: модули щитовика 00–13, другие направления 20–23,
+     отдельные колоды (разборы, сокращения, аппаратура, словарь) 80–91. */
+  const pad2 = (n) => String(n).padStart(2, '0');
+  S.anki = {
+    root: 'Школа щитовика',
+    url: 'https://slowmeow.github.io/shkola-shchitovika/anki/shkola-shchitovika.apkg',
+    modName(track, ti, m) { return track.id === 'shchit' ? `${pad2(m.n)} ${m.title}` : `${pad2(19 + ti)} ${track.title}`; },
+    deckOf(id) {
+      for (let ti = 0; ti < S.program.length; ti++) {
+        const t = S.program[ti];
+        for (const m of t.modules) {
+          const li = m.lessons.findIndex((x) => x.id === id);
+          if (li >= 0) return `${S.anki.root}::${S.anki.modName(t, ti, m)}::${pad2(li + 1)} ${m.lessons[li].title}`;
+        }
+      }
+      return null;
+    },
+    box(id, extra) {
+      const d = id ? S.anki.deckOf(id) : S.anki.root;
+      return `<section class="box anki" style="margin-top:28px"><div class="lbl">${S.icon('layers')}Повторение в Anki</div>
+        <p>${id ? 'Карточки этого урока — в подколоде' : 'Все карточки курса — в колоде'} <b>${esc(d.split('::').slice(1).join(' → ') || d)}</b>${extra || ''}. Скачай колоду один раз и импортируй в Anki (на телефоне — AnkiDroid или AnkiMobile). Когда колода обновится, импортируй новый файл поверх: изменённые карточки обновятся, история повторений сохранится.</p>
+        <div class="row"><a class="btn sm" href="${S.anki.url}" download target="_blank" rel="noopener">${S.icon('download')}Скачать колоду Anki (.apkg)</a><a class="btn sm ghost" href="#program" data-go="program">Как учиться</a></div></section>`;
+    }
+  };
   S.programLessons = allProg;
 
   const TEMPLATE = [

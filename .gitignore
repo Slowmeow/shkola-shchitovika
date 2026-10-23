@@ -4,3 +4,4 @@ node_modules/
 __pycache__/
 *.tmp
 _artifact-test.html
+anki/cards.json
