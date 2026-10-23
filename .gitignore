@@ -1,7 +1,9 @@
+*.tmp
 .claude-inbox-*.json
 .claude-reply.md
-node_modules/
 __pycache__/
-*.tmp
 _artifact-test.html
 anki/cards.json
+node_modules/
+norms/index.json
+norms/report.md
