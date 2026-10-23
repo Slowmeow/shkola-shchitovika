@@ -13,6 +13,7 @@
 """
 import hashlib
 import json
+import re
 from pathlib import Path
 
 import genanki
@@ -89,6 +90,8 @@ ROOT_DESC = (
     'и ответ не будет подсказан порядком.<br><br>'
     '<b>Правила колоды.</b> Один факт — одна карточка; ответ короткий, причина — в поле «Почему»; '
     'у норм указан пункт документа; задачи помечены тегом «тип::задача» и уровнем 1–3.<br><br>'
+    '<b>Отдельные колоды.</b> «83 Экзамены» — вопросы экзаменов с пояснениями; «84 Узнай по виду» — аппараты по рисунку, '
+    'обозначения на схемах, твои щиты на фото, графики характеристик и схемы систем заземления.<br><br>'
     'Обновление: скачай новую версию и импортируй поверх — изменённые карточки обновятся, '
     'история повторений сохранится.'
 )
@@ -122,6 +125,13 @@ for d in DATA['decks']:
         dk.add_note(note)
         total += 1
 
-pkg = genanki.Package(list(decks.values()))
+# картинки: в колоду попадают только файлы, на которые ссылаются карточки (anki/media, рисует tools/render-media.mjs)
+MEDIA = ROOT / 'anki' / 'media'
+used = sorted({m for d in DATA['decks'] for n in d['notes'] for v in n['fields'].values() for m in re.findall(r'<img src="([^"]+)"', str(v))})
+missing = [m for m in used if not (MEDIA / m).exists()]
+if missing:
+    raise SystemExit('Нет файлов картинок: ' + ', '.join(missing[:10]) + ' — запусти node tools/render-media.mjs')
+
+pkg = genanki.Package(list(decks.values()), media_files=[str(MEDIA / m) for m in used])
 pkg.write_to_file(str(OUT))
-print(f'Готово: {OUT.relative_to(ROOT)} — колод {len(decks)}, карточек {total}, {OUT.stat().st_size // 1024} КБ')
+print(f'Готово: {OUT.relative_to(ROOT)} — колод {len(decks)}, карточек {total}, картинок {len(used)}, {OUT.stat().st_size // 1024} КБ')

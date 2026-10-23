@@ -1,0 +1,740 @@
+{
+ "shk-ill-ohm.webp": {
+  "kind": "ill",
+  "key": "ohm",
+  "w": 628,
+  "h": 274
+ },
+ "shk-ill-power.webp": {
+  "kind": "ill",
+  "key": "power",
+  "w": 628,
+  "h": 274
+ },
+ "shk-ill-ac.webp": {
+  "kind": "ill",
+  "key": "ac",
+  "w": 628,
+  "h": 269
+ },
+ "shk-ill-three.webp": {
+  "kind": "ill",
+  "key": "three",
+  "w": 628,
+  "h": 259
+ },
+ "shk-ill-tnc.webp": {
+  "kind": "ill",
+  "key": "tnc",
+  "w": 628,
+  "h": 254
+ },
+ "shk-ill-tns.webp": {
+  "kind": "ill",
+  "key": "tns",
+  "w": 628,
+  "h": 254
+ },
+ "shk-ill-tncs.webp": {
+  "kind": "ill",
+  "key": "tncs",
+  "w": 628,
+  "h": 254
+ },
+ "shk-ill-tt.webp": {
+  "kind": "ill",
+  "key": "tt",
+  "w": 628,
+  "h": 254
+ },
+ "shk-ill-it.webp": {
+  "kind": "ill",
+  "key": "it",
+  "w": 628,
+  "h": 254
+ },
+ "shk-ill-mcb.webp": {
+  "kind": "ill",
+  "key": "mcb",
+  "w": 628,
+  "h": 304
+ },
+ "shk-ill-curves.webp": {
+  "kind": "ill",
+  "key": "curves",
+  "w": 628,
+  "h": 316
+ },
+ "shk-ill-rcd.webp": {
+  "kind": "ill",
+  "key": "rcd",
+  "w": 628,
+  "h": 284
+ },
+ "shk-ill-chain.webp": {
+  "kind": "ill",
+  "key": "chain",
+  "w": 628,
+  "h": 474
+ },
+ "shk-ill-colors.webp": {
+  "kind": "ill",
+  "key": "colors",
+  "w": 628,
+  "h": 304
+ },
+ "shk-ill-cablemark.webp": {
+  "kind": "ill",
+  "key": "cablemark",
+  "w": 628,
+  "h": 304
+ },
+ "shk-ill-bath.webp": {
+  "kind": "ill",
+  "key": "bath",
+  "w": 628,
+  "h": 290
+ },
+ "shk-ill-comb.webp": {
+  "kind": "ill",
+  "key": "comb",
+  "w": 628,
+  "h": 310
+ },
+ "shk-ill-ferrule.webp": {
+  "kind": "ill",
+  "key": "ferrule",
+  "w": 628,
+  "h": 224
+ },
+ "shk-ill-pensplit.webp": {
+  "kind": "ill",
+  "key": "pensplit",
+  "w": 628,
+  "h": 298
+ },
+ "shk-ill-spd.webp": {
+  "kind": "ill",
+  "key": "spd",
+  "w": 628,
+  "h": 290
+ },
+ "shk-ill-rn.webp": {
+  "kind": "ill",
+  "key": "rn",
+  "w": 628,
+  "h": 292
+ },
+ "shk-ill-meter1.webp": {
+  "kind": "ill",
+  "key": "meter1",
+  "w": 628,
+  "h": 316
+ },
+ "shk-ill-meter3.webp": {
+  "kind": "ill",
+  "key": "meter3",
+  "w": 628,
+  "h": 308
+ },
+ "shk-ill-contactor.webp": {
+  "kind": "ill",
+  "key": "contactor",
+  "w": 628,
+  "h": 310
+ },
+ "shk-ill-vdrop.webp": {
+  "kind": "ill",
+  "key": "vdrop",
+  "w": 628,
+  "h": 254
+ },
+ "shk-ill-selectivity.webp": {
+  "kind": "ill",
+  "key": "selectivity",
+  "w": 628,
+  "h": 298
+ },
+ "shk-ill-switch1.webp": {
+  "kind": "ill",
+  "key": "switch1",
+  "w": 628,
+  "h": 286
+ },
+ "shk-ill-passthrough.webp": {
+  "kind": "ill",
+  "key": "passthrough",
+  "w": 628,
+  "h": 286
+ },
+ "shk-ill-socketwiring.webp": {
+  "kind": "ill",
+  "key": "socketwiring",
+  "w": 628,
+  "h": 312
+ },
+ "shk-ill-zerobreak.webp": {
+  "kind": "ill",
+  "key": "zerobreak",
+  "w": 628,
+  "h": 316
+ },
+ "shk-ill-nmix.webp": {
+  "kind": "ill",
+  "key": "nmix",
+  "w": 628,
+  "h": 304
+ },
+ "shk-ill-loop.webp": {
+  "kind": "ill",
+  "key": "loop",
+  "w": 628,
+  "h": 290
+ },
+ "shk-ill-ground.webp": {
+  "kind": "ill",
+  "key": "ground",
+  "w": 628,
+  "h": 290
+ },
+ "shk-ill-din.webp": {
+  "kind": "ill",
+  "key": "din",
+  "w": 628,
+  "h": 266
+ },
+ "shk-ill-ip.webp": {
+  "kind": "ill",
+  "key": "ip",
+  "w": 628,
+  "h": 238
+ },
+ "shk-ill-stardelta.webp": {
+  "kind": "ill",
+  "key": "stardelta",
+  "w": 628,
+  "h": 286
+ },
+ "shk-ill-kz.webp": {
+  "kind": "ill",
+  "key": "kz",
+  "w": 628,
+  "h": 258
+ },
+ "shk-ill-equip.webp": {
+  "kind": "ill",
+  "key": "equip",
+  "w": 628,
+  "h": 288
+ },
+ "shk-ill-ladder.webp": {
+  "kind": "ill",
+  "key": "ladder",
+  "w": 628,
+  "h": 290
+ },
+ "shk-ill-leak.webp": {
+  "kind": "ill",
+  "key": "leak",
+  "w": 628,
+  "h": 224
+ },
+ "shk-ill-panelfront.webp": {
+  "kind": "ill",
+  "key": "panelfront",
+  "w": 628,
+  "h": 304
+ },
+ "shk-sys-tnc.webp": {
+  "kind": "sys",
+  "key": "tnc",
+  "w": 628,
+  "h": 254
+ },
+ "shk-sys-tns.webp": {
+  "kind": "sys",
+  "key": "tns",
+  "w": 628,
+  "h": 254
+ },
+ "shk-sys-tncs.webp": {
+  "kind": "sys",
+  "key": "tncs",
+  "w": 628,
+  "h": 254
+ },
+ "shk-sys-tt.webp": {
+  "kind": "sys",
+  "key": "tt",
+  "w": 628,
+  "h": 254
+ },
+ "shk-sys-it.webp": {
+  "kind": "sys",
+  "key": "it",
+  "w": 628,
+  "h": 254
+ },
+ "shk-dev-mcb.webp": {
+  "kind": "dev",
+  "key": "mcb",
+  "w": 138,
+  "h": 272
+ },
+ "shk-dev-mcb3.webp": {
+  "kind": "dev",
+  "key": "mcb3",
+  "w": 217,
+  "h": 272
+ },
+ "shk-dev-rcd.webp": {
+  "kind": "dev",
+  "key": "rcd",
+  "w": 178,
+  "h": 272
+ },
+ "shk-dev-rcbo.webp": {
+  "kind": "dev",
+  "key": "rcbo",
+  "w": 178,
+  "h": 272
+ },
+ "shk-dev-rcbo1.webp": {
+  "kind": "dev",
+  "key": "rcbo1",
+  "w": 138,
+  "h": 272
+ },
+ "shk-dev-vn.webp": {
+  "kind": "dev",
+  "key": "vn",
+  "w": 178,
+  "h": 272
+ },
+ "shk-dev-spd.webp": {
+  "kind": "dev",
+  "key": "spd",
+  "w": 178,
+  "h": 272
+ },
+ "shk-dev-rn.webp": {
+  "kind": "dev",
+  "key": "rn",
+  "w": 178,
+  "h": 272
+ },
+ "shk-dev-rkf.webp": {
+  "kind": "dev",
+  "key": "rkf",
+  "w": 178,
+  "h": 272
+ },
+ "shk-dev-meter1.webp": {
+  "kind": "dev",
+  "key": "meter1",
+  "w": 336,
+  "h": 272
+ },
+ "shk-dev-meter3.webp": {
+  "kind": "dev",
+  "key": "meter3",
+  "w": 415,
+  "h": 272
+ },
+ "shk-dev-contactor.webp": {
+  "kind": "dev",
+  "key": "contactor",
+  "w": 178,
+  "h": 272
+ },
+ "shk-dev-imp.webp": {
+  "kind": "dev",
+  "key": "imp",
+  "w": 138,
+  "h": 272
+ },
+ "shk-dev-timer.webp": {
+  "kind": "dev",
+  "key": "timer",
+  "w": 178,
+  "h": 272
+ },
+ "shk-dev-photo.webp": {
+  "kind": "dev",
+  "key": "photo",
+  "w": 138,
+  "h": 272
+ },
+ "shk-dev-fuse.webp": {
+  "kind": "dev",
+  "key": "fuse",
+  "w": 138,
+  "h": 272
+ },
+ "shk-dev-nbus.webp": {
+  "kind": "dev",
+  "key": "nbus",
+  "w": 257,
+  "h": 272
+ },
+ "shk-dev-cross.webp": {
+  "kind": "dev",
+  "key": "cross",
+  "w": 257,
+  "h": 272
+ },
+ "shk-dev-term.webp": {
+  "kind": "dev",
+  "key": "term",
+  "w": 217,
+  "h": 272
+ },
+ "shk-dev-ind.webp": {
+  "kind": "dev",
+  "key": "ind",
+  "w": 138,
+  "h": 272
+ },
+ "shk-dev-dinsock.webp": {
+  "kind": "dev",
+  "key": "dinsock",
+  "w": 217,
+  "h": 272
+ },
+ "shk-dev-sw102.webp": {
+  "kind": "dev",
+  "key": "sw102",
+  "w": 257,
+  "h": 272
+ },
+ "shk-dev-uzdp.webp": {
+  "kind": "dev",
+  "key": "uzdp",
+  "w": 178,
+  "h": 272
+ },
+ "shk-sym-01.webp": {
+  "kind": "sym",
+  "key": "Автоматический выключатель (QF)",
+  "w": 94,
+  "h": 214
+ },
+ "shk-sym-02.webp": {
+  "kind": "sym",
+  "key": "УЗО (QD)",
+  "w": 102,
+  "h": 214
+ },
+ "shk-sym-03.webp": {
+  "kind": "sym",
+  "key": "Дифавтомат (QFD)",
+  "w": 102,
+  "h": 214
+ },
+ "shk-sym-04.webp": {
+  "kind": "sym",
+  "key": "Выключатель нагрузки (QS)",
+  "w": 95,
+  "h": 214
+ },
+ "shk-sym-05.webp": {
+  "kind": "sym",
+  "key": "Предохранитель (FU)",
+  "w": 76,
+  "h": 214
+ },
+ "shk-sym-06.webp": {
+  "kind": "sym",
+  "key": "УЗИП (FV)",
+  "w": 94,
+  "h": 232
+ },
+ "shk-sym-07.webp": {
+  "kind": "sym",
+  "key": "Счётчик (PI)",
+  "w": 116,
+  "h": 214
+ },
+ "shk-sym-08.webp": {
+  "kind": "sym",
+  "key": "Заземление",
+  "w": 90,
+  "h": 91
+ },
+ "shk-sym-09.webp": {
+  "kind": "sym",
+  "key": "Лампа (EL)",
+  "w": 125,
+  "h": 131
+ },
+ "shk-sym-10.webp": {
+  "kind": "sym",
+  "key": "Розетка (XS)",
+  "w": 103,
+  "h": 91
+ },
+ "shk-sym-11.webp": {
+  "kind": "sym",
+  "key": "Двигатель (M)",
+  "w": 142,
+  "h": 148
+ },
+ "shk-sym-12.webp": {
+  "kind": "sym",
+  "key": "Катушка реле/контактора (K)",
+  "w": 164,
+  "h": 109
+ },
+ "shk-sym-13.webp": {
+  "kind": "sym",
+  "key": "Нормально открытый контакт / кнопка",
+  "w": 186,
+  "h": 80
+ },
+ "shk-sym-14.webp": {
+  "kind": "sym",
+  "key": "Нормально закрытый контакт",
+  "w": 186,
+  "h": 80
+ },
+ "shk-sym-15.webp": {
+  "kind": "sym",
+  "key": "Нагревательный элемент (EK)",
+  "w": 164,
+  "h": 100
+ },
+ "shk-curve-B.webp": {
+  "kind": "graph",
+  "key": "curve-B",
+  "w": 588,
+  "h": 485
+ },
+ "shk-curve-C.webp": {
+  "kind": "graph",
+  "key": "curve-C",
+  "w": 588,
+  "h": 485
+ },
+ "shk-curve-D.webp": {
+  "kind": "graph",
+  "key": "curve-D",
+  "w": 588,
+  "h": 485
+ },
+ "shk-rcd-types.webp": {
+  "kind": "graph",
+  "key": "rcd-types",
+  "w": 628,
+  "h": 684
+ },
+ "shk-photo-p1-1.webp": {
+  "kind": "photo",
+  "key": "p1#0",
+  "w": 668,
+  "h": 509
+ },
+ "shk-photo-p1-2.webp": {
+  "kind": "photo",
+  "key": "p1#1",
+  "w": 668,
+  "h": 509
+ },
+ "shk-photo-p1-3.webp": {
+  "kind": "photo",
+  "key": "p1#2",
+  "w": 668,
+  "h": 509
+ },
+ "shk-photo-p1-4.webp": {
+  "kind": "photo",
+  "key": "p1#3",
+  "w": 668,
+  "h": 509
+ },
+ "shk-photo-p1-5.webp": {
+  "kind": "photo",
+  "key": "p1#4",
+  "w": 668,
+  "h": 509
+ },
+ "shk-photo-p1-6.webp": {
+  "kind": "photo",
+  "key": "p1#5",
+  "w": 668,
+  "h": 509
+ },
+ "shk-photo-p1-7.webp": {
+  "kind": "photo",
+  "key": "p1#6",
+  "w": 668,
+  "h": 509
+ },
+ "shk-photo-p1-8.webp": {
+  "kind": "photo",
+  "key": "p1#7",
+  "w": 668,
+  "h": 509
+ },
+ "shk-photo-p2-1.webp": {
+  "kind": "photo",
+  "key": "p2#0",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p2-2.webp": {
+  "kind": "photo",
+  "key": "p2#1",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p2-3.webp": {
+  "kind": "photo",
+  "key": "p2#2",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p2-4.webp": {
+  "kind": "photo",
+  "key": "p2#3",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p2-5.webp": {
+  "kind": "photo",
+  "key": "p2#4",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p2-6.webp": {
+  "kind": "photo",
+  "key": "p2#5",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p3-1.webp": {
+  "kind": "photo",
+  "key": "p3#0",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p3-2.webp": {
+  "kind": "photo",
+  "key": "p3#1",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p3-3.webp": {
+  "kind": "photo",
+  "key": "p3#2",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p3-4.webp": {
+  "kind": "photo",
+  "key": "p3#3",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p3-5.webp": {
+  "kind": "photo",
+  "key": "p3#4",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p3-6.webp": {
+  "kind": "photo",
+  "key": "p3#5",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p3-7.webp": {
+  "kind": "photo",
+  "key": "p3#6",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p4-1.webp": {
+  "kind": "photo",
+  "key": "p4#0",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p4-2.webp": {
+  "kind": "photo",
+  "key": "p4#1",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p4-3.webp": {
+  "kind": "photo",
+  "key": "p4#2",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p4-4.webp": {
+  "kind": "photo",
+  "key": "p4#3",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p4-5.webp": {
+  "kind": "photo",
+  "key": "p4#4",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p4-6.webp": {
+  "kind": "photo",
+  "key": "p4#5",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p4-7.webp": {
+  "kind": "photo",
+  "key": "p4#6",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p5-1.webp": {
+  "kind": "photo",
+  "key": "p5#0",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p5-2.webp": {
+  "kind": "photo",
+  "key": "p5#1",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p5-3.webp": {
+  "kind": "photo",
+  "key": "p5#2",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p5-4.webp": {
+  "kind": "photo",
+  "key": "p5#3",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p5-5.webp": {
+  "kind": "photo",
+  "key": "p5#4",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p5-6.webp": {
+  "kind": "photo",
+  "key": "p5#5",
+  "w": 508,
+  "h": 668
+ },
+ "shk-photo-p5-7.webp": {
+  "kind": "photo",
+  "key": "p5#6",
+  "w": 508,
+  "h": 668
+ }
+}

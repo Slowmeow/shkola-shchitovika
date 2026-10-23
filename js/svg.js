@@ -256,7 +256,7 @@
     if (type === 'TT' || type === 'IT') {
       g.push(V.wire([[xEnd + 62, 104], [xEnd + 62, 150]], 'PE', { w: 2 }));
       g.push(sym.ground(xEnd + 62, 150));
-      g.push(V.tx(xEnd + 72, 160, 'свой заземлитель', { size: 10.5, f: 'var(--ink-2)' }));
+      g.push(V.tx(xEnd + 50, 164, 'свой заземлитель', { a: 'end', size: 10.5, f: 'var(--ink-2)' })); // слева от знака земли, чтобы не обрезалось
     }
     const names = {
       'TN-C': 'TN-C: ноль и земля — один провод PEN (старые дома)',

@@ -45,6 +45,13 @@ with tempfile.TemporaryDirectory() as tmp:
         if not re.sub(r'<[^>]+>|\s', '', q):
             errors.append(f'карточка {cid}: пустой вопрос')
 
+    # картинки: каждая, на которую ссылается карточка, лежит в папке медиа коллекции
+    have = {p.name for p in Path(col.media.dir()).iterdir()}
+    refs = {m for d in EXPECTED['decks'] for n in d['notes'] for v in n['fields'].values() for m in re.findall(r'<img src="([^"]+)"', str(v))}
+    lost = sorted(refs - have)
+    if lost:
+        errors.append(f'нет картинок в коллекции: {len(lost)} (например, {lost[0]})')
+
     # повторный импорт той же колоды не создаёт дублей
     do_import()
     if col.note_count() != notes:
@@ -56,7 +63,7 @@ with tempfile.TemporaryDirectory() as tmp:
     tree = sorted(n for n in names if n.count('::') <= 1)
     col.close()
 
-print(f'Anki: импортировано записей {notes}, карточек {cards}, колод {len(names)}')
+print(f'Anki: импортировано записей {notes}, карточек {cards}, колод {len(names)}, картинок {len(refs)}')
 print('Верхний уровень:', '; '.join(tree[:20]))
 if sample:
     print('Пример вопроса:', re.sub(r'<[^>]+>', ' ', sample)[:200].strip())

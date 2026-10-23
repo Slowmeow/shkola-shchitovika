@@ -28,6 +28,23 @@ const decks = [];
 const stats = { qa: 0, cloze: 0, byType: {} };
 const count = (t) => { stats.byType[t] = (stats.byType[t] || 0) + 1; };
 
+// картинки из anki/media (рисует tools/render-media.mjs); в колоду их кладёт build_anki.py по ссылкам <img src>
+const MEDIA_IDX = path.join(ROOT, 'anki', 'media', 'index.json');
+const media = fs.existsSync(MEDIA_IDX) ? JSON.parse(fs.readFileSync(MEDIA_IDX, 'utf8')) : {};
+const img = (name, max) => (media[name] ? `<div style="margin:10px 0"><img src="${name}" width="${Math.min(media[name].w, max || 560)}" style="max-width:100%;height:auto"></div>` : '');
+const stems = (s) => new Set((String(s).toLowerCase().match(/[а-яё]{5,}/g) || []).map((w) => w.slice(0, 5)));
+const figLog = [];
+// рисунок урока → карточка, проверено вручную (по вопросу; '' — рисунок ни к одной карточке не подходит)
+const PIC_FIX = {
+  'resistivity|vdrop': 'Падение напряжения в однофазной линии', 'series-parallel|switch1': '', 'three-troubles|kz': 'Что защищает от короткого замыкания?',
+  'cables|colors': '', 'din|panelfront': '', 'mcb-curves|curves': 'При каком токе автомат C16 отключит мгновенно', 'busbars|comb': '',
+  'spd|spd': 'Где ставят УЗИП относительно УЗО?', 'rn|rn': 'Как выбрать номинал реле напряжения?', 'rn|zerobreak': 'Что происходит при обрыве нуля',
+  'schemes|ladder': '', 'switches|switch1': '', 'switches|passthrough': 'Сколько жил между двумя проходными', 'layout|panelfront': 'Как размещать УЗО и его автоматы?',
+  'three-panel|comb': 'Как распределять однофазные группы?', 'vdrop|vdrop': 'Почему в формуле множитель 2?', 'meter|meter1': 'Однофазный счётчик', 'meter|meter3': '',
+  'sockets|socketwiring': '', 'rcd|nmix': '',
+  'cables|cablemark': 'Что значит буква «А»', 'din|din': 'Сколько модулей занимает', 'loop|loop': 'Ток КЗ в конце линии 120 А', 'selectivity|selectivity': 'Какая пара хорошая для селективности', 'leak|leak': 'Почему УЗО может выбивать'
+};
+
 const note = (key, kind, f, tags) => {
   if (/\{\{c\d+::/.test(f.q)) { stats.cloze++; return { guidKey: key, model: 'cloze', fields: f, tags }; }
   stats.qa++;
@@ -61,6 +78,25 @@ S.program.forEach((track) => {
           count('тест');
         });
       }
+      // рисунки урока — в ответ той карточки, с которой у рисунка (подписи и текста рядом) больше всего общих слов
+      [...l.html.matchAll(/data-ill="(\w+)"/g)].map((m) => m[1]).filter((k, i, a) => a.indexOf(k) === i && media[`shk-ill-${k}.webp`]).forEach((k) => {
+        const at = l.html.indexOf(`data-ill="${k}"`);
+        const ctx = stems(text(S.ill[k]()) + ' ' + text(l.html.slice(at, at + 900)));
+        let best = null, score = 0;
+        const fix = PIC_FIX[`${l.id}|${k}`];
+        if (fix != null) { best = fix && notes.find((n) => text(n.fields.q).includes(fix)); score = best ? 99 : 0; }
+        else notes.forEach((n) => {
+          if (n.pic) return;
+          let c = 0;
+          stems(text(n.fields.q + ' ' + (n.fields.a || ''))).forEach((w) => { if (ctx.has(w)) c++; });
+          if (c > score) { score = c; best = n; }
+        });
+        if (best && score >= 3) {
+          best.pic = k;
+          if (best.model === 'cloze') best.fields.why = img(`shk-ill-${k}.webp`) + best.fields.why; else best.fields.a += img(`shk-ill-${k}.webp`);
+          figLog.push(`${l.id} · ${k} (${score}) → ${text(best.fields.q).slice(0, 90)}`);
+        } else figLog.push(`${l.id} · ${k} — нет подходящей карточки`);
+      });
       S.glossary.filter((g) => g.go === 'lesson.' + l.id).forEach((g) => {
         notes.push(note(`term|${g.id}`, 'term', { ...base, q: `Что такое <b>${clean(g.term)}</b>?`, a: clean(g.def), why: g.alt ? `Другое название или обозначение: ${clean(g.alt)}.` : '', src: '' }, tags.concat('тип::термин')));
         g._used = true; count('термин');
@@ -81,6 +117,40 @@ S.program.forEach((track) => {
   if (notes.length) decks.push({ name: `${ROOT_DECK}::${x.name}`, desc: x.desc, notes });
 });
 
+// «Узнай по виду»: аппарат по рисунку, обозначения на схемах, твои щиты на фото, графики характеристик
+if (Object.keys(media).length) {
+  const see = (sub, desc, list) => { if (list.length) decks.push({ name: `${ROOT_DECK}::84 Узнай по виду::${sub}`, desc, notes: list }); };
+  const mk = (key, topic, link, q, a, why, src) => { count('картинка'); return note(`see|${key}`, 'see', { topic: 'Узнай по виду → ' + topic, link, q, a, why: why || '', src: src || '' }, ['колода::see', 'тип::картинка']); };
+  see('01 Аппараты по виду', 'Аппарат на рисунке — назови его и скажи, зачем он в щите.', S.devices.filter((d) => media[`shk-dev-${d.id}.webp`]).map((d) =>
+    mk(`dev|${d.id}`, 'Аппараты', `${SITE}#device.${d.id}`, img(`shk-dev-${d.id}.webp`, 260) + 'Что это за аппарат и зачем он в щите?', `<b>${clean(d.name)}</b>${d.code && d.code !== '—' ? `, на схеме — ${clean(d.code)}` : ''}`, clean(d.short))));
+  const syms = (S.SYMS || []).map(([n], i) => [n, `shk-sym-${pad(i + 1)}.webp`]).filter(([, f]) => media[f]);
+  const SYMSRC = 'ГОСТ 2.755-87 (коммутационные устройства), ГОСТ 2.721-74 (общего применения), ГОСТ 2.710-81 (буквенные коды)';
+  see('02 Обозначения на схемах', 'Условные графические обозначения: узнать символ и нарисовать его по названию.', syms.flatMap(([n, f]) => [
+    mk(`sym|${n}`, 'Обозначения', `${SITE}#ref.symbols`, img(f, 200) + 'Что обозначает этот символ на схеме?', `<b>${clean(n)}</b>`, '', SYMSRC),
+    mk(`sym-r|${n}`, 'Обозначения', `${SITE}#ref.symbols`, `Как обозначают на схеме: <b>${clean(n)}</b>? Нарисуй на бумаге, потом сверь.`, img(f, 200), '', SYMSRC)
+  ]));
+  const SKIP = /Свободн|Пустое|Коробка|Пометки|Ключ|поверх/;
+  see('03 Твои щиты на фото', 'Фото щитов с твоего объекта: что отмечено красным кругом.', S.photos.flatMap((p) => p.pins.map((pin, i) => [p, pin, `shk-photo-${p.id}-${i + 1}.webp`]))
+    .filter(([, pin, f]) => media[f] && !SKIP.test(pin.t))
+    .map(([p, pin, f]) => mk(`photo|${p.id}|${pin.t}`, 'Твой объект', `${SITE}#photos`, img(f, 440) + `Фото «${clean(p.title)}». Что отмечено красным кругом?`, `<b>${clean(pin.t)}</b>`, clean(pin.d))));
+  const SYS = [
+    ['tnc', 'TN-C', 'Нейтраль источника глухо заземлена, а нулевой рабочий и нулевой защитный проводники совмещены в одном проводнике PEN на всём протяжении: корпус присоединён к PEN, отдельного PE нет.'],
+    ['tns', 'TN-S', 'Нейтраль источника глухо заземлена, N и PE разделены на всём протяжении — от самого источника идут два отдельных проводника.'],
+    ['tncs', 'TN-C-S', 'От источника идёт совмещённый PEN, в точке разделения (обычно на вводе здания) он делится на N и PE; дальше — раздельно.'],
+    ['tt', 'TT', 'Нейтраль источника глухо заземлена, а корпуса присоединены к своему заземлителю потребителя, электрически независимому от заземлителя нейтрали; PE от источника нет.'],
+    ['it', 'IT', 'Нейтраль источника изолирована от земли (или заземлена через большое сопротивление), корпуса присоединены к заземлителю.']
+  ];
+  const INST = { B: '3–5·In', C: '5–10·In', D: '10–20·In' };
+  const CSRC = 'ГОСТ IEC 60898-1';
+  see('04 Графики', 'Время-токовые характеристики автоматов и типы УЗО по форме тока утечки.', ['B', 'C', 'D'].filter((k) => media[`shk-curve-${k}.webp`]).map((k) =>
+    mk(`curve|${k}`, 'Графики', `${SITE}#gear.curves`, img(`shk-curve-${k}.webp`) + `Характеристика ${k}. В каком диапазоне кратности тока автомат отключается мгновенно, за доли секунды?`, `${INST[k]}`, `Ниже ${INST[k].split('–')[0]} мгновенный расцепитель не сработает — отключит только тепловой, с задержкой; от ${INST[k].split('–')[1]} — сработает обязательно. Между ними — разброс отдельных экземпляров.`, CSRC))
+    .concat(media['shk-curve-C.webp'] ? [
+      mk('curve|1.13-1.45', 'Графики', `${SITE}#gear.curves`, img('shk-curve-C.webp') + 'Что гарантирует стандарт при токе 1,13·In и при 1,45·In?', '1,13·In — не отключится в течение 1 ч; 1,45·In — отключится меньше чем за 1 ч.', 'Отсюда правило выбора: кабель защищён от перегрузки, если I₂ ≤ 1,45·I_z (МЭК 60364-4-43). У модульного автомата I₂ = 1,45·In, поэтому достаточно In ≤ I_z — номинал автомата не больше допустимого тока кабеля.', CSRC),
+      mk('curve|2.55', 'Графики', `${SITE}#gear.curves`, img('shk-curve-B.webp') + 'За какое время автомат на ток до 32 А обязан отключить ток 2,55·In?', 'От 1 до 60 с.', 'Для автоматов больше 32 А — от 1 до 120 с.', CSRC)] : [])
+    .concat(SYS.filter(([k]) => media[`shk-sys-${k}.webp`]).map(([k, name, why]) => mk(`sys|${k}`, 'Графики', `${SITE}#lesson.earth`, img(`shk-sys-${k}.webp`) + 'Какая система заземления на схеме? По какому признаку это видно?', `<b>${name}</b>`, why, 'ПУЭ п. 1.7.3')))
+    .concat(media['shk-rcd-types.webp'] ? [mk('rcd-types', 'Графики', `${SITE}#gear.rcd-types`, 'Какую форму тока утечки обнаруживают УЗО типов AC, A, F и B?', 'AC — синусоидальный переменный; A — ещё и пульсирующий постоянный; F — ещё и смешанной частоты; B — ещё и гладкий постоянный.' + img('shk-rcd-types.webp'), 'Каждый следующий тип обнаруживает всё, что предыдущий. Для техники с электроникой нужен как минимум тип A.', 'ГОСТ IEC 61008-1; МЭК 62423')] : []));
+}
+
 // термины и формулы без урока — в отдельные колоды
 const restTerms = S.glossary.filter((g) => !g._used);
 if (restTerms.length) decks.push({ name: `${ROOT_DECK}::90 Словарь (без урока)`, desc: 'Термины, которые не относятся к одному уроку.', notes: restTerms.map((g) => { count('термин'); return note(`term|${g.id}`, 'term', { topic: 'Словарь', link: SITE + '#ref.glossary', q: `Что такое <b>${clean(g.term)}</b>?`, a: clean(g.def), why: g.alt ? `Другое название или обозначение: ${clean(g.alt)}.` : '', src: '' }, ['тип::термин']); }) });
@@ -93,12 +163,13 @@ let bad = 0;
 decks.forEach((d) => d.notes.forEach((n) => {
   if (keys.has(n.guidKey)) { console.log('повтор ключа:', d.name, n.guidKey.slice(0, 90)); bad++; }
   keys.add(n.guidKey);
-  if (!text(n.fields.q) || !text(n.fields.a)) { console.log('пустое поле:', d.name, n.guidKey.slice(0, 90)); bad++; }
+  if (!text(n.fields.q) || (!text(n.fields.a) && !/<img/.test(n.fields.a))) { console.log('пустое поле:', d.name, n.guidKey.slice(0, 90)); bad++; }
 }));
 
 const out = { generated: new Date().toISOString(), root: ROOT_DECK, site: SITE, decks };
 fs.mkdirSync(path.join(ROOT, 'anki'), { recursive: true });
 fs.writeFileSync(path.join(ROOT, 'anki', 'cards.json'), JSON.stringify(out, null, 1));
+if (process.argv.includes('--pics')) console.log(figLog.join('\n')); // куда попали рисунки уроков
 const total = decks.reduce((a, d) => a + d.notes.length, 0);
 console.log(`Колод: ${decks.length}, карточек: ${total} (вопрос-ответ ${stats.qa}, пропуски ${stats.cloze}); по типам: ${JSON.stringify(stats.byType)}`);
 if (bad) { console.log('Ошибок: ' + bad); process.exit(1); }

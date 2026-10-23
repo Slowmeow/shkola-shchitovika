@@ -28,6 +28,7 @@
 - `python tools/build.py` — собирает `index.html` из `app.html` и обновляет версию офлайн-кэша в `sw.js`. Запускать перед каждым коммитом с изменениями кода.
 - `node tools/test-engine.cjs 1000` — строгая проверка конструктора на проектах, щитах с фото и случайных щитах.
 - `node tools/test-content.cjs` — проверка содержимого (загружает скрипты в порядке `app.html`; уроки `v2: true` проверяются по новому шаблону).
+- Картинки для Anki: `node tools/render-media.mjs` (нужен Chrome) рисует рисунки уроков, аппараты, обозначения, графики и фото щитов с отметками в `anki/media/*.webp`; запускать после изменения рисунков. Куда попадает рисунок урока — `node tools/export-cards.cjs --pics`, ручные привязки — `PIC_FIX` в `export-cards.cjs`.
 - Колода Anki: `node tools/export-cards.cjs` → `python tools/build_anki.py` (нужен `genanki`) → `python tools/check_anki.py` (нужен пакет `anki`: импортирует колоду настоящим движком Anki). Результат — `anki/shkola-shchitovika.apkg`, ссылка на него есть в каждом уроке. Имена подколод задаёт `S.anki.deckOf` в `js/program.js`; id типов записей в `build_anki.py` не менять.
 - Прогресс пользователя хранится только в его браузере (`localStorage`, ключ `shk:v1`); в репозиторий он не попадает, пока пользователь сам не отправит заявку «Мой прогресс».
 
