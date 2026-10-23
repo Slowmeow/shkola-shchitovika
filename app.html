@@ -321,7 +321,8 @@ textarea.inp{min-height:96px;resize:vertical;line-height:1.5}
 .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table.tbl{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
 .tbl th,.tbl td{padding:6px 12px;text-align:left;border:1px solid var(--border);vertical-align:top}
-.tbl th{font-weight:600;background:var(--bg-subtle);white-space:nowrap}
+.tbl th{font-weight:600;background:var(--bg-subtle);hyphens:manual;overflow-wrap:break-word}
+@media (max-width:600px){.tbl th,.tbl td{padding:6px 8px}table.tbl{font-size:13.5px}}
 .tbl tbody tr:nth-child(2n){background:var(--bg-subtle)}
 .tbl td.c,.tbl th.c{text-align:center}
 .tbl td.r,.tbl th.r{text-align:right}
@@ -683,6 +684,7 @@ button.issue{border:0;background:none;width:100%;text-align:left;cursor:pointer}
 <script src="js/c00.js"></script>
 <script src="js/c01.js"></script>
 <script src="js/c02.js"></script>
+<script src="js/c03.js"></script>
 <script src="js/cards.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/render-panel.js"></script>
