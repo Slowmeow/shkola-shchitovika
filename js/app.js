@@ -15,6 +15,7 @@
   const isKnown = (l) => l.known && S.profile.known.includes(l.known);
   const crumbs = (items) => `<nav class="crumbs" aria-label="Навигация">${items.map(([t, r], i) => r ? `<a href="#${r}" data-go="${r}">${esc(t)}</a>${i < items.length - 1 ? '<span>/</span>' : ''}` : `<span>${esc(t)}</span>`).join('')}</nav>`;
   const head = (eyebrow, title, sub, cr) => `<div class="page-head">${cr || ''}${eyebrow ? `<div class="eyebrow">${eyebrow}</div>` : ''}<h1 class="h1">${title}</h1>${sub ? `<p class="muted">${sub}</p>` : ''}</div>`;
+  const ttsRow = (label) => `<div class="row" style="margin:-6px 0 16px">${S.tts.btn(label)}</div>`;
   const levelDots = (n) => `<span class="badge" title="Сложность ${n} из 5">${'●'.repeat(n)}${'○'.repeat(5 - n)}</span>`;
   const LVLC = ['', '#2da44e', '#0969da', '#8250df', '#fb8500', '#cf222e'];
   const xpBadge = (got, n) => got ? `<span class="badge xp got">✓ ${n} XP</span>` : `<span class="badge xp">+${n} XP</span>`;
@@ -145,7 +146,7 @@
       const mi = S.course.indexOf(l.module);
       const q = store.data.quiz[l.id];
       return `<div class="wrap">${crumbs([['Курс', 'course'], [`Модуль ${mi}`, null]])}
-        <div class="page-head" style="margin-top:8px"><div class="row"><span class="badge">${S.icon('book')}Урок ${l.module.lessons.indexOf(l.module.lessons.find((x) => x.id === l.id)) + 1} из ${l.module.lessons.length}</span><span class="badge">${S.icon('clock')}${l.min} мин</span>${xpBadge(isDone(l.id), 40)}${isKnown(l) ? '<span class="badge info">ты это делал</span>' : ''}</div><h1 class="h1" style="margin-top:6px">${esc(l.title)}</h1><p class="small muted">${esc(l.module.title)}</p></div>
+        <div class="page-head" style="margin-top:8px"><div class="row"><span class="badge">${S.icon('book')}Урок ${l.module.lessons.indexOf(l.module.lessons.find((x) => x.id === l.id)) + 1} из ${l.module.lessons.length}</span><span class="badge">${S.icon('clock')}${l.min} мин</span>${xpBadge(isDone(l.id), 40)}${isKnown(l) ? '<span class="badge info">ты это делал</span>' : ''}</div><h1 class="h1" style="margin-top:6px">${esc(l.title)}</h1><p class="small muted">${esc(l.module.title)}</p><div class="row" style="margin-top:8px">${S.tts.btn('Слушать урок')}</div></div>
         <article class="prose">${l.html}</article>
         ${l.quiz && l.quiz.length ? `<section class="stack" style="margin-top:32px"><div class="row"><h2 class="h2" style="flex:1">Проверь себя</h2>${q ? `<span class="badge ${q.s === q.t ? 'ok' : 'warn'}">лучший: ${q.s}/${q.t}</span>` : '<span class="badge xp">до +25 XP</span>'}</div><p class="small muted" style="margin-top:-8px">Зачёт — от половины верных ответов (урок засчитается сам). Все верные — бонус.</p>${S.quizHTML(l.quiz, l.id)}</section>` : ''}
         <div class="row" style="margin-top:20px"><button class="btn ${isDone(l.id) ? '' : 'game'}" type="button" data-done>${S.icon('check')}${isDone(l.id) ? 'Пройден' : 'Отметить пройденным'}</button><button class="btn" type="button" data-ask>${S.icon('chat')}Спросить Claude</button></div>
@@ -205,7 +206,7 @@
     render(id) {
       const f = S.formulaById[id];
       if (!f) return '<div class="wrap"><div class="empty">Формула не найдена.</div></div>';
-      return `<div class="wrap">${head(esc(f.cat), esc(f.name), '', crumbs([['Справочник', 'ref'], ['Формулы', 'ref.formulas']]))}
+      return `<div class="wrap">${head(esc(f.cat), esc(f.name), '', crumbs([['Справочник', 'ref'], ['Формулы', 'ref.formulas']]))}${ttsRow()}
         <div class="stack">${B.fx(f.f)}<dl class="kv">${f.vars.map((v) => `<dt>${v[0]}</dt><dd>${esc(v[1])}${v[2] ? `, <span class="mono">${v[2]}</span>` : ''}</dd>`).join('')}</dl>
         <p class="prose">${f.about}</p>${B.ex(`<p>${f.ex}</p>`)}<div data-calc="${f.id}"></div>
         ${f.lesson ? `<p>${B.go('lesson.' + f.lesson, 'Подробнее в уроке')}</p>` : ''}</div></div>`;
@@ -225,7 +226,7 @@
       const d = S.devices.find((x) => x.id === id);
       if (!d) return '<div class="wrap"><div class="empty">Аппарат не найден.</div></div>';
       const list = (arr) => arr && arr.length ? `<ul>${arr.map((x) => `<li>${x}</li>`).join('')}</ul>` : '';
-      return `<div class="wrap">${head(`${esc(d.cat)} · код ${esc(d.code)}`, esc(d.name), esc(d.alt), crumbs([['Справочник', 'ref'], ['Аппараты', 'ref.devices']]))}
+      return `<div class="wrap">${head(`${esc(d.cat)} · код ${esc(d.code)}`, esc(d.name), esc(d.alt), crumbs([['Справочник', 'ref'], ['Аппараты', 'ref.devices']]))}${ttsRow()}
         <div class="row" style="align-items:flex-end;gap:18px">${d.face ? `<figure class="ill" style="padding:6px">${S.devCard(d.face)}<figcaption>так выглядит</figcaption></figure>` : ''}${d.sym ? `<figure class="ill" style="padding:6px">${symFor(d.sym)}<figcaption>на схеме</figcaption></figure>` : ''}</div>
         <div class="prose" style="margin-top:16px"><p>${d.what}</p>
         ${d.marks && d.marks.length ? `<h2>Что написано на корпусе</h2>${B.tbl(['Надпись', 'Значит'], d.marks.map((m) => [`<span class="mono">${esc(m[0])}</span>`, esc(m[1])]))}` : ''}
@@ -236,12 +237,12 @@
     }
   });
   function refTables() {
-    return `<div class="wrap">${head('', 'Таблицы', 'Нажми на название, чтобы перейти к таблице.')}${refNav('tables')}
+    return `<div class="wrap">${head('', 'Таблицы', 'Нажми на название, чтобы перейти к таблице.')}${refNav('tables')}${ttsRow('Слушать таблицы')}
       <div class="chips" style="margin-bottom:16px">${S.tables.map((t) => `<button type="button" class="chip" data-tt="${t.id}">${esc(t.title.split(' — ')[0].split(' (')[0])}</button>`).join('')}</div>
       <div class="stack-lg">${S.tables.map((t) => `<section class="stack-sm" id="t-${t.id}" style="scroll-margin-top:76px"><h2 class="h3">${esc(t.title)}</h2>${t.about ? `<p class="small muted">${esc(t.about)}</p>` : ''}${B.tbl(t.head, t.rows, t.cap)}</section>`).join('')}</div></div>`;
   }
   function refNorms() {
-    return `<div class="wrap">${head('', 'Нормы и правила', 'Документы, на которые опирается электрик, и короткий список главных правил с номерами пунктов.')}${refNav('norms')}
+    return `<div class="wrap">${head('', 'Нормы и правила', 'Документы, на которые опирается электрик, и короткий список главных правил с номерами пунктов.')}${refNav('norms')}${ttsRow('Слушать нормы и правила')}
       <section class="stack-sm"><h2 class="h3">Главные правила щитовика</h2><div class="list">${S.rules.map((r, i) => `<div class="li" style="cursor:default"><span class="mono small" style="color:var(--fg-muted);width:22px">${i + 1}</span><span class="t"><b style="font-weight:500">${esc(r[0])}</b><span class="mono">${esc(r[1])}</span></span></div>`).join('')}</div></section>
       <section class="stack-sm" style="margin-top:26px"><h2 class="h3">Документы</h2><div class="list">${S.norms.map((n) => `<a class="li" href="#norm.${n.id}" data-go="norm.${n.id}"><span class="badge">${esc(n.kind)}</span><span class="t"><b>${esc(n.code)}</b><span>${esc(n.title)}</span></span>${S.icon('next')}</a>`).join('')}</div></section></div>`;
   }
@@ -250,7 +251,7 @@
     render(id) {
       const n = S.norms.find((x) => x.id === id);
       if (!n) return '<div class="wrap"><div class="empty">Документ не найден.</div></div>';
-      return `<div class="wrap">${head(esc(n.kind), esc(n.code), esc(n.title), crumbs([['Справочник', 'ref'], ['Нормы', 'ref.norms']]))}<div class="prose"><p>${esc(n.about)}</p><h2>Что важно щитовику</h2><ul>${n.points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div></div>`;
+      return `<div class="wrap">${head(esc(n.kind), esc(n.code), esc(n.title), crumbs([['Справочник', 'ref'], ['Нормы', 'ref.norms']]))}${ttsRow()}<div class="prose"><p>${esc(n.about)}</p><h2>Что важно щитовику</h2><ul>${n.points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div></div>`;
     }
   });
   function refSymbols() {
@@ -262,7 +263,7 @@
   }
   function refGlossary() {
     const seen = Object.keys(store.data.xp).filter((k) => k.startsWith('t:')).length;
-    return `<div class="wrap">${head('', 'Словарь', `Все непонятные слова простыми словами. Термины в уроках подчёркнуты пунктиром — нажми, чтобы открыть. Изучено: ${seen} из ${S.glossary.length}.`)}${refNav('glossary')}
+    return `<div class="wrap">${head('', 'Словарь', `Все непонятные слова простыми словами. Термины в уроках подчёркнуты пунктиром — нажми, чтобы открыть. Изучено: ${seen} из ${S.glossary.length}.`)}${refNav('glossary')}${ttsRow('Слушать словарь')}
       <input class="inp" id="gq" type="search" placeholder="Найти термин: PEN, УЗО, ПуГВ…" autocomplete="off" style="margin-bottom:14px">
       <div class="list" id="glist">${S.glossary.map((g) => `<details class="acc" style="border:0;border-radius:0;border-top:1px solid var(--border-muted)" data-s="${esc((g.term + ' ' + (g.alt || '') + ' ' + S.strip(g.def)).toLowerCase())}" data-gid="${esc(g.id)}"><summary>${esc(g.term)}${g.alt ? `<span class="small muted" style="font-weight:400">${esc(g.alt)}</span>` : ''}</summary><div class="in"><p>${g.def}</p>${g.go ? `<p style="margin-top:8px">${B.go(g.go, 'Подробнее')}</p>` : ''}</div></details>`).join('')}</div></div>`;
   }
@@ -377,7 +378,7 @@
       const p = S.projects.find((x) => x.id === id);
       if (!p) return '<div class="wrap"><div class="empty">Проект не найден.</div></div>';
       if (p.photos) { setTimeout(() => S.go('photos', { replace: true }), 0); return '<div class="wrap"></div>'; }
-      return `<div class="wrap wide">${crumbs([['Практика', 'practice'], [p.title, null]])}<div class="page-head" style="margin-top:8px"><div class="row"><span class="badge"><span class="lang"><i style="background:${LVLC[p.level]}"></i></span>${p.control ? 'Автоматика' : 'Щит'}</span>${levelDots(p.level)}</div><h1 class="h1" style="margin-top:6px">${esc(p.title)}</h1><p class="muted">${esc(p.sub)}</p></div>
+      return `<div class="wrap wide">${crumbs([['Практика', 'practice'], [p.title, null]])}<div class="page-head" style="margin-top:8px"><div class="row"><span class="badge"><span class="lang"><i style="background:${LVLC[p.level]}"></i></span>${p.control ? 'Автоматика' : 'Щит'}</span>${levelDots(p.level)}</div><h1 class="h1" style="margin-top:6px">${esc(p.title)}</h1><p class="muted">${esc(p.sub)}</p><div class="row" style="margin-top:8px">${S.tts.btn('Слушать проект')}</div></div>
         <div class="prose" style="margin-bottom:16px">${p.intro}</div>
         ${p.cfg ? `<div class="row" style="margin-bottom:12px"><button class="btn primary" type="button" data-open>${S.icon('panel')}Открыть в конструкторе</button><span class="small muted">там можно менять потребителей и аппараты</span></div><div id="projRes"></div>` : ''}
         ${p.control ? `<div id="ctlBox"></div>` : ''}
@@ -400,7 +401,7 @@
     tab: 'practice', parent: 'practice',
     render() {
       const pinSeen = (ph, i) => !!store.data.xp['pn:' + ph + ':' + i];
-      return `<div class="wrap wide">${crumbs([['Практика', 'practice'], ['Твои щиты', null]])}<div class="page-head" style="margin-top:8px"><h1 class="h1">Твои щиты: офис</h1><p class="muted">Разбор фото, которые ты прислал. Нажимай на жёлтые метки — появится объяснение. Изучи все метки фото — +15 XP.</p></div>
+      return `<div class="wrap wide">${crumbs([['Практика', 'practice'], ['Твои щиты', null]])}<div class="page-head" style="margin-top:8px"><h1 class="h1">Твои щиты: офис</h1><p class="muted">Разбор фото, которые ты прислал. Нажимай на жёлтые метки — появится объяснение. Изучи все метки фото — +15 XP.</p><div class="row" style="margin-top:8px">${S.tts.btn('Слушать разбор фото')}</div></div>
         <section class="stack"><h2 class="h2">Как связаны щиты</h2><div class="row" style="align-items:flex-start;gap:18px"><figure class="ill" style="flex:1 1 320px;max-width:460px">${S.photoSystemSVG()}</figure><div class="prose" style="flex:1 1 300px">
           <p>На стене четыре щита. Высокий справа — <b>ЩУ, щит учёта</b>: сюда приходит питание от ВРУ здания, оно проходит через вводной автомат, счётчик и раздаётся отходящими автоматами на остальные щиты.</p>
           <p><b>ЩР-1</b> и <b>ЩР-2</b> — распределительные: розетки рабочих мест на дифавтоматах, немного освещения и линии без УЗО. <b>ЩО</b> — освещение: шесть групп C10.</p>
@@ -815,6 +816,37 @@
     nick.addEventListener('change', () => { store.data.profile.nick = nick.value.trim().slice(0, 24); store.touch(); R.hud(); S.toast('Имя сохранено'); });
   }
   S.bus.on('install', () => { if (S.current.name === 'home' || (S.current.name === 'profile' && S.current.arg === 'set')) S.softRender(); });
+
+  /* что читать кнопкой «Слушать» */
+  S.tts.handlers.lesson = (id) => {
+    const l = lessonById(id);
+    if (!l) return null;
+    return { title: l.title, paras: [`Модуль ${S.course.indexOf(l.module)}: ${l.module.title}.`, `Урок: ${l.title}.`].concat(S.tts.fromHTML(l.html), l.quiz && l.quiz.length ? S.tts.quizText(l.quiz) : []) };
+  };
+  S.tts.handlers.project = (id) => {
+    const p = S.projects.find((x) => x.id === id);
+    if (!p) return null;
+    const paras = [`Проект: ${p.title}.`, `${p.sub}.`].concat(S.tts.fromHTML(p.intro || ''));
+    if (p.cfg) {
+      try {
+        const R1 = E.build(p.cfg);
+        paras.push(`Сборка по шагам. Всего шагов: ${R1.steps.length}.`);
+        R1.steps.forEach((s, i) => paras.push(`Шаг ${i + 1}: ${s.title}. ${s.text}${s.why ? ' Почему так: ' + s.why : ''}`));
+      } catch (e) { /* без шагов */ }
+    }
+    if (p.control) { const v = S.$('#view .ctl-exp'); if (v) paras.push('Схема управления. ' + v.textContent); }
+    if (p.tips) { paras.push('Советы.'); p.tips.forEach((t) => paras.push(t)); }
+    return { title: p.title, paras };
+  };
+  S.tts.handlers.photos = () => {
+    const first = S.$('#view section');
+    const paras = ['Твои щиты: офис.'].concat(first ? S.tts.fromElement(first) : []);
+    S.photos.forEach((ph, i) => {
+      paras.push(`Фото ${i + 1}: ${ph.title}.`);
+      ph.pins.forEach((p, k) => paras.push(`Метка ${k + 1}: ${p.t}. ${p.d}`));
+    });
+    return { title: 'Твои щиты', paras };
+  };
 
   /* старые адреса */
   S.aliases = { ai: (arg) => (S.env === 'artifact' ? { name: 'ai', arg } : { name: 'claude', arg: 'how' }) };
