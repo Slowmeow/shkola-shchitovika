@@ -55,7 +55,7 @@
     let t = String(s || '').replace(/\s+/g, ' ');
     t = t.replace(/=/g, ' равно ').replace(/\//g, ' делить на ').replace(/·|×|\*/g, ' умножить на ').replace(/\+/g, ' плюс ').replace(/−|-(?=\s)/g, ' минус ').replace(/²/g, ' в квадрате').replace(/³/g, ' в кубе');
     t = t.replace(/\(/g, ', скобка, ').replace(/\)/g, ', закрыть скобку,');
-    t = t.replace(/\b([A-Za-z])(?=[\s,₀-₉\d]|$)/g, (m, c) => LETTERS[c] || c);
+    t = t.replace(/\b([A-Za-z])(?=[\s,\u2080-\u2089\d]|$)/g, (m, c) => LETTERS[c] || c);
     return T.speakable(t).replace(/,\s*,/g, ',').replace(/\s{2,}/g, ' ');
   };
 

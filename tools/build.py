@@ -71,13 +71,13 @@ html = f'''<!doctype html>
 </body>
 </html>
 '''
-(ROOT / 'index.html').write_text(html, encoding='utf-8')
+(ROOT / 'index.html').write_text(html, encoding='utf-8', newline='\n')
 
 sw = (ROOT / 'sw.js').read_text(encoding='utf-8')
 sw = re.sub(r"const VERSION = '[^']*';", f"const VERSION = '{version}';", sw)
 sw = re.sub(r'const ASSETS = \[[^\]]*\];', 'const ASSETS = ' + json.dumps(assets, ensure_ascii=False) + ';', sw, flags=re.S)
-(ROOT / 'sw.js').write_text(sw, encoding='utf-8')
-(ROOT / '.nojekyll').write_text('', encoding='utf-8')
+(ROOT / 'sw.js').write_text(sw, encoding='utf-8', newline='\n')
+(ROOT / '.nojekyll').write_text('', encoding='utf-8', newline='\n')
 missing = [a for a in assets if a not in ('./',) and not (ROOT / a).is_file()]
 print(f'index.html готов, версия кэша {version}, файлов в кэше: {len(assets)}')
 if missing:

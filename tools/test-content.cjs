@@ -1,7 +1,9 @@
 // Проверка содержимого: уроки, тесты, ссылки, термины, формулы, проекты, достижения.
 // Запуск: node tools/test-content.cjs
 'use strict';
-const S = require('./load-app.cjs')(undefined, ['core', 'rpg', 'svg', 'data-glossary', 'data-formulas', 'data-devices', 'data-norms', 'data-tables', 'course-1', 'course-2', 'course-3', 'course-4', 'cards', 'engine', 'render-panel', 'projects', 'control', 'games', 'photos', 'sync', 'tts', 'program']);
+// скрипты — в том же порядке, что и на странице (app.html); ai.js и app.js требуют браузера
+const PAGE = [...require('fs').readFileSync(require('path').join(__dirname, '..', 'app.html'), 'utf8').matchAll(/<script src="js\/([\w-]+)\.js"><\/script>/g)].map((m) => m[1]);
+const S = require('./load-app.cjs')(undefined, PAGE.filter((f) => f !== 'ai' && f !== 'app'));
 let n = 0;
 const bad = (m) => { n++; if (n <= 60) console.log('✗ ' + m); };
 const views = new Set(['home', 'course', 'lesson', 'ref', 'formula', 'device', 'norm', 'practice', 'game', 'project', 'photos', 'builder', 'claude', 'profile', 'ai']);
@@ -48,6 +50,22 @@ lessons.forEach((l) => {
     if (!q.e) bad(`урок ${l.id} вопрос ${i + 1}: нет пояснения`);
   });
   if (!l.quiz || !l.quiz.length) bad(`урок ${l.id}: нет теста`);
+  if (l.v2) {
+    // новый формат: цели, физика, история, задачи по уровням, пояснения целыми предложениями, без аналогий
+    ['box goal', 'box hist'].concat(l.org ? [] : ['box phys']).forEach((c) => { if (!html.includes(c)) bad(`урок ${l.id}: нет блока «${c}»`); });
+    if (!html.includes('<h2>')) bad(`урок ${l.id}: нет разделов h2`);
+    const P = l.problems || [];
+    if (P.length < 3) bad(`урок ${l.id}: меньше 3 задач`);
+    P.forEach((p, i) => {
+      if (![1, 2, 3].includes(p.lvl)) bad(`урок ${l.id} задача ${i + 1}: уровень не 1–3`);
+      if (!p.q || !p.sol || !p.a) bad(`урок ${l.id} задача ${i + 1}: нет условия, решения или ответа`);
+      scanHTML(p.q, `урок ${l.id} задача ${i + 1}`); scanHTML(p.sol, `урок ${l.id} решение ${i + 1}`);
+    });
+    if (new Set(P.map((p) => p.lvl)).size < 2) bad(`урок ${l.id}: задачи только одного уровня`);
+    (l.quiz || []).forEach((q, i) => { if (!/[.!?]$/.test(q.e.trim()) || q.e.split(/[.!?]\s/).length < 2) bad(`урок ${l.id} вопрос ${i + 1}: пояснение должно быть из целых предложений (не меньше двух)`); });
+    const text = (html + P.map((p) => p.q + p.sol).join(' ') + (l.quiz || []).map((q) => q.e).join(' ')).toLowerCase();
+    ['представь', 'словно', 'как будто', 'аналогия', 'похоже на'].forEach((w) => { if (text.includes(w)) bad(`урок ${l.id}: аналогия («${w}») — нужно физическое объяснение`); });
+  }
 });
 S.glossary.forEach((g) => { if (g.go) route(g.go, 'термин ' + g.id); scanHTML(g.def, 'термин ' + g.id); if (!g.def) bad('термин без определения ' + g.id); });
 S.formulas.forEach((f) => {

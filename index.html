@@ -46,6 +46,7 @@
   --h0:#eff2f5; --h1:#aceebb; --h2:#4ac26b; --h3:#2da44e; --h4:#116329;
   --gold:#bf8700; --xp-a:#ffd33d; --xp-b:#fb8f44; --lvl-a:#8250df; --lvl-b:#bf3989; --flame:#fb8500;
   --r-c:#6e7781; --r-r:#0969da; --r-e:#8250df; --r-l:#bf8700;
+  --cyan:#0e7490; --cyan-subtle:#e4f6fa;
   /* старые имена, на которых нарисованы схемы и иллюстрации */
   --surface:var(--bg); --surface-2:var(--bg-subtle); --surface-3:var(--bg-muted);
   --ink:var(--fg); --ink-2:var(--fg-muted); --ink-3:var(--fg-subtle); --line:var(--border); --line-2:var(--border-strong);
@@ -78,6 +79,7 @@
     --h0:#1b222c; --h1:#033a16; --h2:#196c2e; --h3:#2ea043; --h4:#56d364;
     --gold:#e3b341; --xp-a:#f2cc60; --xp-b:#f0883e; --lvl-a:#a371f7; --lvl-b:#db61a2; --flame:#ff9e3d;
     --r-c:#8b949e; --r-r:#4493f8; --r-e:#ab7df8; --r-l:#e3b341;
+    --cyan:#22d3ee; --cyan-subtle:rgba(34,211,238,.12);
     --w-l1:#B0703A; --w-l2:#0B0B0B; --w-l3:#9AA0A3; --w-n:#4A8BF0; --w-pe:#3DB25B; --w-pey:#E8C824; --w-edge:rgba(235,240,236,.55);
     --dev:#F2F3F0; --dev-2:#DCDFDA; --dev-line:#8D958F; --rail:#5F6862; --enc:#1b222c; --enc-line:#3d444d;
     color-scheme:dark;
@@ -101,6 +103,7 @@
   --h0:#1b222c; --h1:#033a16; --h2:#196c2e; --h3:#2ea043; --h4:#56d364;
   --gold:#e3b341; --xp-a:#f2cc60; --xp-b:#f0883e; --lvl-a:#a371f7; --lvl-b:#db61a2; --flame:#ff9e3d;
   --r-c:#8b949e; --r-r:#4493f8; --r-e:#ab7df8; --r-l:#e3b341;
+  --cyan:#22d3ee; --cyan-subtle:rgba(34,211,238,.12);
   --w-l1:#B0703A; --w-l2:#0B0B0B; --w-l3:#9AA0A3; --w-n:#4A8BF0; --w-pe:#3DB25B; --w-pey:#E8C824; --w-edge:rgba(235,240,236,.55);
   --dev:#F2F3F0; --dev-2:#DCDFDA; --dev-line:#8D958F; --rail:#5F6862; --enc:#1b222c; --enc-line:#3d444d;
   color-scheme:dark;
@@ -214,6 +217,15 @@ dfn,.term{font-style:normal;border-bottom:1px dashed var(--accent);cursor:help}
 .box.norm{border-color:var(--done);background:var(--done-subtle)} .box.norm>.lbl{color:var(--done)}
 .box.skill{border-color:var(--accent);background:var(--accent-subtle)} .box.skill>.lbl{color:var(--accent)}
 .box.ex{border-color:var(--border-strong);background:var(--bg-subtle)}
+.box.goal{border-color:var(--accent);background:var(--accent-subtle)} .box.goal>.lbl{color:var(--accent)}
+.box.phys{border-color:var(--cyan);background:var(--cyan-subtle)} .box.phys>.lbl{color:var(--cyan)}
+.box.hist{border-color:var(--sponsors);background:var(--sponsors-subtle)} .box.hist>.lbl{color:var(--sponsors)}
+.prob{display:flex;flex-direction:column;gap:10px}
+.prob .pq>*+*{margin-top:8px}
+.prob details{border-top:1px solid var(--border-muted);padding-top:8px}
+.prob summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:14px}
+.prob .sol{margin-top:8px;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.prob .sol ol,.prob .sol ul{padding-left:22px;margin:0}
 .fx{font-family:var(--font-mono);font-size:18px;font-weight:600;background:var(--bg-subtle);border:1px solid var(--border-muted);border-radius:6px;padding:14px 16px;text-align:center;overflow-x:auto;white-space:nowrap}
 .fx sub,.fx sup{font-size:.68em}
 figure{margin:0}
@@ -679,28 +691,30 @@ button.issue{border:0;background:none;width:100%;text-align:left;cursor:pointer}
   </div>
 </div>
 
-<script src="js/core.js?v=b8d93fda03"></script>
-<script src="js/rpg.js?v=b8d93fda03"></script>
-<script src="js/svg.js?v=b8d93fda03"></script>
-<script src="js/data-glossary.js?v=b8d93fda03"></script>
-<script src="js/data-formulas.js?v=b8d93fda03"></script>
-<script src="js/data-devices.js?v=b8d93fda03"></script>
-<script src="js/data-norms.js?v=b8d93fda03"></script>
-<script src="js/data-tables.js?v=b8d93fda03"></script>
-<script src="js/course-1.js?v=b8d93fda03"></script>
-<script src="js/course-2.js?v=b8d93fda03"></script>
-<script src="js/course-3.js?v=b8d93fda03"></script>
-<script src="js/course-4.js?v=b8d93fda03"></script>
-<script src="js/engine.js?v=b8d93fda03"></script>
-<script src="js/render-panel.js?v=b8d93fda03"></script>
-<script src="js/projects.js?v=b8d93fda03"></script>
-<script src="js/control.js?v=b8d93fda03"></script>
-<script src="js/games.js?v=b8d93fda03"></script>
-<script src="js/photos.js?v=b8d93fda03"></script>
-<script src="js/ai.js?v=b8d93fda03"></script>
-<script src="js/tts.js?v=b8d93fda03"></script>
-<script src="js/program.js?v=b8d93fda03"></script>
-<script src="js/sync.js?v=b8d93fda03"></script>
-<script src="js/app.js?v=b8d93fda03"></script>
+<script src="js/core.js?v=3d7180c0ec"></script>
+<script src="js/rpg.js?v=3d7180c0ec"></script>
+<script src="js/svg.js?v=3d7180c0ec"></script>
+<script src="js/data-glossary.js?v=3d7180c0ec"></script>
+<script src="js/data-formulas.js?v=3d7180c0ec"></script>
+<script src="js/data-devices.js?v=3d7180c0ec"></script>
+<script src="js/data-norms.js?v=3d7180c0ec"></script>
+<script src="js/data-tables.js?v=3d7180c0ec"></script>
+<script src="js/course-1.js?v=3d7180c0ec"></script>
+<script src="js/course-2.js?v=3d7180c0ec"></script>
+<script src="js/course-3.js?v=3d7180c0ec"></script>
+<script src="js/course-4.js?v=3d7180c0ec"></script>
+<script src="js/c00.js?v=3d7180c0ec"></script>
+<script src="js/cards.js?v=3d7180c0ec"></script>
+<script src="js/engine.js?v=3d7180c0ec"></script>
+<script src="js/render-panel.js?v=3d7180c0ec"></script>
+<script src="js/projects.js?v=3d7180c0ec"></script>
+<script src="js/control.js?v=3d7180c0ec"></script>
+<script src="js/games.js?v=3d7180c0ec"></script>
+<script src="js/photos.js?v=3d7180c0ec"></script>
+<script src="js/ai.js?v=3d7180c0ec"></script>
+<script src="js/tts.js?v=3d7180c0ec"></script>
+<script src="js/program.js?v=3d7180c0ec"></script>
+<script src="js/sync.js?v=3d7180c0ec"></script>
+<script src="js/app.js?v=3d7180c0ec"></script>
 </body>
 </html>

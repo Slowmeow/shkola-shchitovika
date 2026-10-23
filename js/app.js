@@ -159,6 +159,7 @@
         <div class="page-head" style="margin-top:8px"><div class="row"><span class="badge">${S.icon('book')}Урок ${l.module.lessons.indexOf(l.module.lessons.find((x) => x.id === l.id)) + 1} из ${l.module.lessons.length}</span><span class="badge">${S.icon('clock')}${l.min} мин</span>${xpBadge(isDone(l.id), 40)}${isKnown(l) ? '<span class="badge info">ты это делал</span>' : ''}</div><h1 class="h1" style="margin-top:6px">${esc(l.title)}</h1><p class="small muted">${esc(l.module.title)}</p><div class="row" style="margin-top:8px">${S.tts.btn('Слушать урок')}</div></div>
         ${needs.length ? `<div class="flash warn" style="margin-bottom:16px"><b>Сначала пройди:</b> ${needs.map((x) => `<a href="#lesson.${x.id}" data-go="lesson.${x.id}">${esc(x.title)}</a>`).join(', ')}. Этот урок опирается на них.</div>` : ''}
         <article class="prose">${l.html}</article>
+        ${l.problems && l.problems.length ? `<section class="stack" style="margin-top:32px"><h2 class="h2">Задачи</h2><p class="small muted" style="margin-top:-8px">Сначала реши сам на бумаге, потом открой решение. ★ — разминка, ★★ — как на объекте, ★★★ — с подвохом.</p>${l.problems.map((p, i) => `<div class="card prob"><div class="row"><span class="badge warn">${'★'.repeat(p.lvl)}</span><b>Задача ${i + 1}</b></div><div class="pq">${p.q}</div><details><summary>Показать решение</summary><div class="sol">${p.sol}<p><b>Ответ:</b> ${p.a}</p></div></details></div>`).join('')}</section>` : ''}
         ${l.quiz && l.quiz.length ? `<section class="stack" style="margin-top:32px"><div class="row"><h2 class="h2" style="flex:1">Проверь себя</h2>${q ? `<span class="badge ${q.s === q.t ? 'ok' : 'warn'}">лучший: ${q.s}/${q.t}</span>` : '<span class="badge xp">до +25 XP</span>'}</div><p class="small muted" style="margin-top:-8px">Зачёт — от половины верных ответов (урок засчитается сам). Все верные — бонус.</p>${S.quizHTML(l.quiz, l.id)}</section>` : ''}
         <div class="row" style="margin-top:20px"><button class="btn ${isDone(l.id) ? '' : 'game'}" type="button" data-done>${S.icon('check')}${isDone(l.id) ? 'Пройден' : 'Отметить пройденным'}</button><button class="btn" type="button" data-ask>${S.icon('chat')}Спросить Claude</button></div>
         <nav class="row lesson-nav" style="margin-top:18px" aria-label="Соседние уроки">${prev ? `<a class="btn wrap" href="#lesson.${prev.id}" data-go="lesson.${prev.id}">${S.icon('prev')}${esc(prev.title)}</a>` : '<span></span>'}${next ? `<a class="btn wrap nx" href="#lesson.${next.id}" data-go="lesson.${next.id}">${esc(next.title)}${S.icon('next')}</a>` : ''}</nav>
@@ -832,7 +833,7 @@
   S.tts.handlers.lesson = (id) => {
     const l = lessonById(id);
     if (!l) return null;
-    return { title: l.title, paras: [`${modLabel(l.module)}: ${l.module.title}.`, `Урок: ${l.title}.`].concat(S.tts.fromHTML(l.html), l.quiz && l.quiz.length ? S.tts.quizText(l.quiz) : []) };
+    return { title: l.title, paras: [`${modLabel(l.module)}: ${l.module.title}.`, `Урок: ${l.title}.`].concat(S.tts.fromHTML(l.html), (l.problems || []).reduce((a, p, i) => a.concat([`Задача ${i + 1}.`], S.tts.fromHTML(p.q), ['Решение.'], S.tts.fromHTML(p.sol), [`Ответ: ${S.strip(p.a)}.`]), []), l.quiz && l.quiz.length ? S.tts.quizText(l.quiz) : []) };
   };
   S.tts.handlers.project = (id) => {
     const p = S.projects.find((x) => x.id === id);

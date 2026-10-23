@@ -104,7 +104,7 @@
   S.lessonIndex = {};
   S.buildCourse = () => {
     const byId = {};
-    (S.course || []).forEach((m) => m.lessons.forEach((l) => { if (!byId[l.id]) byId[l.id] = l; }));
+    (S.course || []).forEach((m) => m.lessons.forEach((l) => { if (!byId[l.id] || (l.v2 && !byId[l.id].v2)) byId[l.id] = l; if (l.v2) S.reworked[l.id] = true; }));
     S.lessonIndex = byId;
     const used = new Set();
     const mods = [];
