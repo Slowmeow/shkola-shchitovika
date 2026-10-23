@@ -6,7 +6,7 @@ const PAGE = [...require('fs').readFileSync(require('path').join(__dirname, '..'
 const S = require('./load-app.cjs')(undefined, PAGE.filter((f) => f !== 'ai' && f !== 'app'));
 let n = 0;
 const bad = (m) => { n++; if (n <= 60) console.log('✗ ' + m); };
-const views = new Set(['home', 'course', 'lesson', 'ref', 'formula', 'device', 'norm', 'practice', 'game', 'project', 'photos', 'builder', 'claude', 'profile', 'ai', 'field']);
+const views = new Set(['home', 'course', 'lesson', 'ref', 'formula', 'device', 'norm', 'practice', 'game', 'project', 'photos', 'builder', 'claude', 'profile', 'ai', 'field', 'gear']);
 const lessons = S.course.reduce((a, m) => a.concat(m.lessons.map((l) => Object.assign({ m: m.id }, l))), []);
 const ids = new Set();
 lessons.forEach((l) => { if (ids.has(l.id)) bad('урок с повтором id ' + l.id); ids.add(l.id); });

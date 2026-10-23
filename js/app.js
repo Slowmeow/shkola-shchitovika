@@ -200,6 +200,7 @@
       if (arg === 'symbols') return refSymbols();
       if (arg === 'glossary') return refGlossary();
       return `<div class="wrap">${head('', 'Справочник', 'Альманах щитовика: формулы с калькуляторами, аппараты, таблицы ПУЭ, нормы, обозначения и словарь.')}${refNav('')}
+        <a class="cta" href="#gear" data-go="gear" style="margin-bottom:14px">${S.icon('layers')}<span class="t"><b>Оборудование: всё по электрике</b><span>Кабели, рейки, клеммы, реле, приборы, инструмент; характеристики B/C/D, типы УЗО, IP, маркировка кабеля; мои паспорта</span></span>${S.icon('next')}</a>
         <div class="grid">${REF.map(([id, t, ic, n, s]) => `<a class="card repo" href="#ref.${id}" data-go="ref.${id}" style="min-height:0"><span class="rt">${S.icon(ic)}${t}<span class="counter" style="margin-left:auto">${n()}</span></span><p>${s}</p></a>`).join('')}</div>
         <section class="stack" style="margin-top:24px"><h2 class="h2">Главные цифры щитовика</h2>${B.tbl(['Что', 'Значение'], [['1 кВт в однофазной сети', '≈ 4,5 А'], ['1 кВт трёхфазной нагрузки', '≈ 1,5 А на фазу'], ['Медь 1,5 / 2,5 / 4 / 6 мм²', 'автомат до 10 / 16 / 25 / 32 А'], ['УЗО для людей / ванная / пожар', '30 / 10 / 100–300 мА'], ['Фоновая утечка на УЗО', '≤ 1/3 уставки'], ['Отключение КЗ в TN 230 В', '≤ 0,4 с'], ['Потери напряжения от ВРУ', 'свет ≤ 3 %, прочее ≤ 4 %'], ['Изоляция проводки', '≥ 0,5 МОм'], ['Щит от газа и труб', '≥ 1 м, IP31+']])}</section>
       </div>`;
@@ -241,13 +242,14 @@
       const list = (arr) => arr && arr.length ? `<ul>${arr.map((x) => `<li>${x}</li>`).join('')}</ul>` : '';
       return `<div class="wrap">${head(`${esc(d.cat)} · код ${esc(d.code)}`, esc(d.name), esc(d.alt), crumbs([['Справочник', 'ref'], ['Аппараты', 'ref.devices']]))}${ttsRow()}
         <div class="row" style="align-items:flex-end;gap:18px">${d.face ? `<figure class="ill" style="padding:6px">${S.devCard(d.face)}<figcaption>так выглядит</figcaption></figure>` : ''}${d.sym ? `<figure class="ill" style="padding:6px">${symFor(d.sym)}<figcaption>на схеме</figcaption></figure>` : ''}</div>
-        <div class="prose" style="margin-top:16px"><p>${d.what}</p>
+        <div class="prose" style="margin-top:16px"><p>${d.what}</p>${S.devExtra && S.devExtra[d.id] ? `</div>${S.devExtra[d.id]()}<div class="prose" style="margin-top:16px">` : ""}
         ${d.marks && d.marks.length ? `<h2>Что написано на корпусе</h2>${B.tbl(['Надпись', 'Значит'], d.marks.map((m) => [`<span class="mono">${esc(m[0])}</span>`, esc(m[1])]))}` : ''}
         <h2>Как подключить</h2>${list(d.connect)}
         ${d.choose && d.choose.length ? `<h2>Как выбрать</h2>${list(d.choose)}` : ''}
         ${d.mistakes && d.mistakes.length ? B.bad(list(d.mistakes)) : ''}
         ${d.lesson ? `<p>${B.go('lesson.' + d.lesson, 'Урок по теме')}</p>` : ''}</div></div>`;
-    }
+    },
+    mount(root, id) { if (S.devMount && S.devMount[id]) S.devMount[id](root); }
   });
   function refTables() {
     return `<div class="wrap">${head('', 'Таблицы', 'Нажми на название, чтобы перейти к таблице.')}${refNav('tables')}${ttsRow('Слушать таблицы')}

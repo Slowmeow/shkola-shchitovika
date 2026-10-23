@@ -4,7 +4,7 @@
 //   node tools/claude.mjs inbox                 — открытые заявки (issues с меткой razbor от владельца)
 //   node tools/claude.mjs show <номер>          — заявка целиком; для щита — расчёт конструктора
 //   node tools/claude.mjs decode <код|файл>      — расшифровать код SHK1… из чата
-//   node tools/claude.mjs add  --title "…" --md файл.md [--type panel|question|progress|photo|bug|task]
+//   node tools/claude.mjs add  --title "…" --md файл.md [--type panel|question|progress|photo|gear|bug|task]
 //                              [--issue N] [--req rID] [--cfg щит.json] [--cfgname "…"] [--links '[["Урок","lesson.rcd"]]']
 //                                                — добавить разбор в razbory/index.json
 //   node tools/claude.mjs reply <номер> --md файл.md [--cfg …] [--cfgname …] [--links …]
