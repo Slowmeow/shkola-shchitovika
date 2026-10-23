@@ -95,7 +95,7 @@ CLAUSE = {
     'СП256': re.compile(r'^\s*([А-ЯA-Z]\.\d+(?:\.\d+)*|\d{1,2}(?:\.\d{1,3}){1,3})\s+(?=[А-ЯA-Z«(])'),
     'ГОСТ12.1.038': re.compile(r'^\s*(\d\.\d{1,2}(?:\.\d{1,2})?)\.?\s+(?=[А-Я])'),
 }
-TABLE = re.compile(r'^\s*Таблица\s+([\d.А-Я]+?)\.?(?:\s|$)')
+TABLE = re.compile(r'^\s*Таблица\s+(?:№\s*)?([\d.А-Я]+?)\.?(?:\s|$)')
 
 
 def index():
@@ -176,9 +176,12 @@ def main(argv):
         return
     if cmd == 'show':
         doc = norm_doc(argv[1])
-        q = ' '.join(argv[2:]).replace('п.', '').replace('пп.', '').strip()
-        q = re.sub(r'^табл(ица)?\.?\s*', 'табл. ', q)
-        for one in [x.strip() for x in q.split(',') if x.strip()]:
+        q = ' '.join(argv[2:]).replace('пп.', '').replace('п.', '').strip()
+        if re.match(r'^табл', q):
+            ids = ['табл. ' + re.sub(r'^табл(ица)?\.?\s*№?\s*', '', q)]
+        else:
+            ids = [x for x in re.split(r'[,\s]+', q) if x]
+        for one in ids:
             t = idx.get(doc, {}).get(one)
             print(f'--- {doc} {one} ---')
             print(t if t else 'НЕ НАЙДЕН (проверь номер или выполни fetch)')

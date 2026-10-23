@@ -6,7 +6,7 @@ const PAGE = [...require('fs').readFileSync(require('path').join(__dirname, '..'
 const S = require('./load-app.cjs')(undefined, PAGE.filter((f) => f !== 'ai' && f !== 'app'));
 let n = 0;
 const bad = (m) => { n++; if (n <= 60) console.log('✗ ' + m); };
-const views = new Set(['home', 'course', 'lesson', 'ref', 'formula', 'device', 'norm', 'practice', 'game', 'project', 'photos', 'builder', 'claude', 'profile', 'ai', 'field', 'gear']);
+const views = new Set(['home', 'course', 'lesson', 'ref', 'formula', 'device', 'norm', 'practice', 'game', 'project', 'photos', 'builder', 'claude', 'profile', 'ai', 'field', 'gear', 'exam']);
 const lessons = S.course.reduce((a, m) => a.concat(m.lessons.map((l) => Object.assign({ m: m.id }, l))), []);
 const ids = new Set();
 lessons.forEach((l) => { if (ids.has(l.id)) bad('урок с повтором id ' + l.id); ids.add(l.id); });
@@ -87,6 +87,19 @@ const FD = S.field || {};
 (FD.rules || []).forEach((r) => { if (!r.norm || !r.q || !r.a || !r.why) bad(`правило ${r.id}: нет нормы, причины или карточки`); });
 (FD.measures || []).forEach((m) => { if (!m.q || !m.a || !m.ref) bad(`замер ${m.id}: нет карточки или основания`); });
 (FD.videos || []).forEach((v) => v.claims.forEach((c) => { if (!["ok", "part", "bad", "prac"].includes(c.v) || !c.text || !c.norm) bad(`разбор ${v.id} совет ${c.n}: неполный`); }));
+// экзамены: варианты, верный ответ, пояснение и основание у каждого вопроса, без повторов
+(S.exams || []).forEach((x) => {
+  if (!x.id || !x.title || !(x.pass > 0 && x.pass <= 1) || !(x.n > 0)) bad(`экзамен ${x.id}: неполное описание`);
+  if (x.pool.length < x.n) bad(`экзамен ${x.id}: в базе ${x.pool.length} вопросов меньше, чем в билете (${x.n})`);
+  const seen = new Set();
+  x.pool.forEach((q, i) => {
+    const w = `экзамен ${x.id} #${i + 1}`;
+    if (!q.q || !q.e || !q.r) bad(`${w}: нет вопроса, пояснения или основания`);
+    if (!Array.isArray(q.a) || q.a.length < 3 || !(q.c >= 0 && q.c < q.a.length)) bad(`${w}: варианты или верный ответ`);
+    if (new Set(q.a).size !== q.a.length) bad(`${w}: повтор варианта`);
+    if (seen.has(q.q)) bad(`${w}: повтор вопроса`); seen.add(q.q);
+  });
+});
 // карточки: ключи — существующие уроки, ответы не пустые
 Object.entries(S.cardsData || {}).forEach(([lid, cs]) => { if (!ids.has(lid)) bad(`карточки для несуществующего урока ${lid}`); cs.forEach((c, i) => { if (!c[0] || !c[1]) bad(`карточка ${lid}#${i + 1} пустая`); }); });
 // программа: зависимости ссылаются на темы программы
