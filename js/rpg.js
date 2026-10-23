@@ -24,7 +24,7 @@
 
   /* ---------- учёт ---------- */
   const allLessons = () => (S.course || []).reduce((a, m) => a.concat(m.lessons), []);
-  const modDone = (mid) => { const m = (S.course || []).find((x) => x.id === mid); return !!m && m.lessons.every((l) => store.data.done[l.id]); };
+  const modDone = (mid) => { const m = (S.course || []).find((x) => x.id === mid); return !!m && m.lessons.length > 0 && m.lessons.every((l) => store.data.done[l.id]); };
   const activeDay = (a) => !!a && Object.keys(a).some((k) => k !== 'visit' && a[k] > 0);
   R.dayCount = (a) => a ? Object.keys(a).reduce((s, k) => s + (k === 'visit' ? 0 : a[k]), 0) : 0;
   R.streak = () => {
@@ -54,20 +54,8 @@
   /* ---------- достижения ---------- */
   const RXP = { c: 25, r: 50, e: 100, l: 200 };
   R.RARITY = { c: 'обычное', r: 'редкое', e: 'эпическое', l: 'легендарное' };
-  const mod = (id, t, r, ic, name) => [id, t, `Пройди модуль «${name}»`, r, ic, () => modDone(id)];
-  const ACH = [
+  const BASE = [
     ['first', 'Первая искра', 'Пройди первый урок', 'c', 'bolt', (c) => c.doneN >= 1],
-    mod('m0', 'Техника безопасности', 'c', 'shield', 'Безопасность прежде всего'),
-    mod('m1', 'Закон Ома', 'r', 'sigma', 'Основы электричества'),
-    mod('m2', 'Знаю сеть', 'r', 'feeder', 'Сеть, ввод и заземление'),
-    mod('m3', 'Кабельщик', 'r', 'cable', 'Провода, кабели и соединения'),
-    mod('m4', 'Аппаратчик', 'e', 'panel', 'Аппараты в щите'),
-    mod('m5', 'Расчётчик', 'e', 'calc', 'Расчёты, которые реально нужны'),
-    mod('m6', 'Нормоконтроль', 'r', 'doc', 'Нормы: что обязательно'),
-    mod('m7', 'Читаю схемы', 'r', 'map', 'Схемы'),
-    mod('m8', 'Сборщик', 'e', 'tool', 'Сборка щита: практикум'),
-    mod('m9', 'Три фазы — не страшно', 'e', 'motor', 'Продвинутое: 3 фазы, двигатели, резерв'),
-    mod('m10', 'Профессионал', 'r', 'trophy', 'Профессия'),
     ['half', 'Половина пути', 'Пройди половину уроков курса', 'r', 'map', (c) => c.doneN >= Math.ceil(c.L.length / 2)],
     ['graduate', 'Выпускник', 'Пройди все уроки курса', 'l', 'trophy', (c) => c.L.length > 0 && c.doneN >= c.L.length],
     ['ace10', 'Отличник', 'Сдай 10 тестов уроков на 100 %', 'r', 'star', (c) => c.perfect >= 10],
@@ -97,8 +85,17 @@
     ['night', 'Ночная смена', 'Позанимайся после 23:00', 'c', 'clock', (c) => !!c.d.xp.night],
     ['early', 'Ранняя пташка', 'Позанимайся до 7 утра', 'c', 'sun', (c) => !!c.d.xp.early]
   ].map(([id, t, d, r, ic, ok]) => ({ id, t, d, r, ic, ok, xp: RXP[r] }));
-  R.ACH = ACH;
-  R.achList = () => ACH.map((a) => Object.assign({ got: store.data.xp['a:' + a.id] ? store.data.xp['a:' + a.id][1] : null }, a));
+  /* достижения за модули строятся по программе курса — новые модули получают свои автоматически */
+  let achCache = null;
+  const achAll = () => {
+    if (achCache && achCache.n === (S.course || []).length) return achCache.list;
+    const mods = (S.course || []).filter((m) => m.ach).map((m) => ({ id: m.id, t: m.ach, d: `Пройди модуль «${m.title}»`, r: m.r || 'r', ic: m.ic || 'trophy', ok: () => modDone(m.id), xp: RXP[m.r || 'r'] }));
+    const list = BASE.slice(0, 1).concat(mods, BASE.slice(1));
+    achCache = { n: (S.course || []).length, list };
+    return list;
+  };
+  Object.defineProperty(R, 'ACH', { get: achAll });
+  R.achList = () => achAll().map((a) => Object.assign({ got: store.data.xp['a:' + a.id] ? store.data.xp['a:' + a.id][1] : null }, a));
 
   /* ---------- ежедневные квесты ---------- */
   const QPOOL = [
@@ -163,7 +160,7 @@
     if (qs.length && qs.every(({ q }) => d.xp['qd:' + day + ':' + q.id])) add('qa:' + day, 50, 'Все квесты дня');
     for (let round = 0; round < 4; round++) {
       const c = ctx();
-      const fresh = ACH.filter((a) => !d.xp['a:' + a.id] && a.ok(c));
+      const fresh = achAll().filter((a) => !d.xp['a:' + a.id] && a.ok(c));
       if (!fresh.length) break;
       fresh.forEach((a) => { add('a:' + a.id, a.xp, 'Достижение'); if (!silent) achQ.push(a); });
     }

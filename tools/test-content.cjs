@@ -1,7 +1,7 @@
 // Проверка содержимого: уроки, тесты, ссылки, термины, формулы, проекты, достижения.
 // Запуск: node tools/test-content.cjs
 'use strict';
-const S = require('./load-app.cjs')(undefined, ['core', 'rpg', 'svg', 'data-glossary', 'data-formulas', 'data-devices', 'data-norms', 'data-tables', 'course-1', 'course-2', 'course-3', 'course-4', 'engine', 'render-panel', 'projects', 'control', 'games', 'photos', 'sync']);
+const S = require('./load-app.cjs')(undefined, ['core', 'rpg', 'svg', 'data-glossary', 'data-formulas', 'data-devices', 'data-norms', 'data-tables', 'course-1', 'course-2', 'course-3', 'course-4', 'cards', 'engine', 'render-panel', 'projects', 'control', 'games', 'photos', 'sync', 'tts', 'program']);
 let n = 0;
 const bad = (m) => { n++; if (n <= 60) console.log('✗ ' + m); };
 const views = new Set(['home', 'course', 'lesson', 'ref', 'formula', 'device', 'norm', 'practice', 'game', 'project', 'photos', 'builder', 'claude', 'profile', 'ai']);
@@ -61,7 +61,13 @@ S.photos.forEach((ph) => ph.pins.forEach((p, i) => { if (!(p.x >= 0 && p.x <= ph
 // игровой слой
 const ach = S.rpg.ACH; if (new Set(ach.map((a) => a.id)).size !== ach.length) bad('повтор id достижений');
 ach.forEach((a) => { if (!S.icons[a.ic]) bad(`достижение ${a.id}: нет иконки ${a.ic}`); });
-S.course.forEach((m) => { if (!ach.find((a) => a.id === m.id)) bad(`модуль ${m.id} без достижения`); });
+S.course.forEach((m) => { if (m.id !== 'm-other' && !ach.find((a) => a.id === m.id)) bad(`модуль ${m.id} без достижения`); });
+if (S.course.some((m) => m.id === 'm-other')) bad('есть уроки вне программы');
+// карточки: ключи — существующие уроки, ответы не пустые
+Object.entries(S.cardsData || {}).forEach(([lid, cs]) => { if (!ids.has(lid)) bad(`карточки для несуществующего урока ${lid}`); cs.forEach((c, i) => { if (!c[0] || !c[1]) bad(`карточка ${lid}#${i + 1} пустая`); }); });
+// программа: зависимости ссылаются на темы программы
+const pl = S.programLessons(); const pids = new Set(pl.map((x) => x.id)); if (pids.size !== pl.length) bad('повтор id в программе');
+pl.forEach((x) => x.needs.forEach((n) => { if (!pids.has(n)) bad(`программа: ${x.id} опирается на неизвестную тему ${n}`); }));
 for (let L = 1; L < 40; L++) if (S.rpg.levelOf(S.rpg.need(L)) !== L || S.rpg.levelOf(S.rpg.need(L + 1) - 1) !== L) bad('ошибка в формуле уровней на ' + L);
 // разборы: стартовый файл читается
 const rz = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'razbory', 'index.json'), 'utf8'));

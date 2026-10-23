@@ -38,7 +38,7 @@
     const l = nextLesson();
     if (!l) return `<a class="cta" href="#game.exam" data-go="game.exam"><span class="t"><b>Курс пройден! Время босса</b><span>Итоговый экзамен: 30 вопросов из всех тем</span></span><span class="btn game">${S.icon('play')}Экзамен</span></a>`;
     const started = Object.keys(store.data.done).length > 0;
-    return `<a class="cta" href="#lesson.${l.id}" data-go="lesson.${l.id}"><span class="t"><span>${started ? 'Продолжить' : 'Начать обучение'} · Модуль ${S.course.indexOf(l.module)}</span><b>${esc(l.title)}</b><span>${l.min} мин · ${esc(l.module.title)}</span></span><span class="btn game" aria-hidden="true">${S.icon('play')}${started ? 'Дальше' : 'Старт'}</span></a>`;
+    return `<a class="cta" href="#lesson.${l.id}" data-go="lesson.${l.id}"><span class="t"><span>${started ? 'Продолжить' : 'Начать обучение'} · ${esc(modLabel(l.module))}</span><b>${esc(l.title)}</b><span>${l.min} мин · ${esc(l.module.title)}</span></span><span class="btn game" aria-hidden="true">${S.icon('play')}${started ? 'Дальше' : 'Старт'}</span></a>`;
   };
 
   /* ================= ГЛАВНАЯ — ЛОББИ ================= */
@@ -111,24 +111,33 @@
     else S.sheet('Установка', `<div class="prose"><p>В Chrome на Android: меню «⋮» → «Установить приложение» (или «Добавить на главный экран»).</p><p>На компьютере: значок установки в адресной строке Chrome или Edge.</p></div>`);
   };
 
-  /* ================= КУРС — КАРТА УРОВНЕЙ ================= */
+  /* ================= КУРС — КАРТА УРОВНЕЙ ПО НАПРАВЛЕНИЯМ ================= */
+  const modLabel = (m) => m.track === 'shchit' ? `Модуль ${m.n}` : m.trackTitle;
   S.view('course', {
-    tab: 'course', top: true, live: true,
-    render() {
+    tab: 'course', top: (arg) => !arg, live: true, parent: 'course',
+    render(arg) {
+      const track = S.program.find((t) => t.id === arg) || S.program[0];
       const L = allLessons();
       const done = L.filter((l) => isDone(l.id)).length;
-      const pct = Math.round(done / L.length * 100);
+      const pct = L.length ? Math.round(done / L.length * 100) : 0;
       const cont = nextLesson();
+      const mods = S.course.filter((m) => m.track === track.id);
+      const tl = mods.reduce((a, m) => a.concat(m.lessons), []);
       return `<div class="wrap">
-        <div class="page-head"><h1 class="h1">Курс щитовика</h1><p class="muted">${S.course.length} модулей, ${L.length} уроков: от «что такое ток» до трёхфазного щита с АВР. Каждый урок — +40 XP, тест — ещё до +25.</p>
-          <div class="bar" style="margin-top:10px"><i style="width:${pct}%"></i></div><div class="row small muted" style="justify-content:space-between"><span>${done} из ${L.length} уроков</span><span class="mono">${pct}%</span></div></div>
+        <div class="page-head"><h1 class="h1">Курс</h1><p class="muted">${S.program.length} направлений: щиты от физики до сложных схем, обозначения, ГОСТы, кондиционеры и гайды. Уроков сейчас: ${L.length}, курс пополняется по программе.</p>
+          <div class="bar" style="margin-top:10px"><i style="width:${pct}%"></i></div><div class="row small muted" style="justify-content:space-between"><span>${done} из ${L.length} уроков</span><span class="mono">${pct}%</span></div>
+          <div class="row" style="margin-top:8px"><a class="btn sm" href="#program" data-go="program">${S.icon('map')}Программа обучения и как учиться</a></div></div>
         ${continueCTA()}
-        <div style="margin-top:16px">${S.course.map((m, mi) => {
+        <nav class="tabs-in" aria-label="Направления" style="margin-top:18px">${S.program.map((t) => { const n = S.course.filter((m) => m.track === t.id).reduce((x, m) => x + m.lessons.length, 0); return `<a href="#course.${t.id}" data-go="course.${t.id}" aria-selected="${t.id === track.id}">${esc(t.title.split(':')[0])} <span class="counter">${n}</span></a>`; }).join('')}</nav>
+        <p class="small muted" style="margin:12px 0">${esc(track.about)}${tl.length ? '' : ' Уроки этого направления сейчас пишутся.'}</p>
+        <div>${mods.map((m) => {
           const md = m.lessons.filter((l) => isDone(l.id)).length;
-          const open = cont && cont.module === m;
-          const st = modStars(m);
-          return `<details class="mod"${open ? ' open' : ''}><summary>${ringNode(md / m.lessons.length, mi, md === m.lessons.length)}<span class="mt"><b>${esc(m.title)}</b><span>${esc(m.sub)}</span></span><span class="side">${starsHTML(st)}<span>${md}/${m.lessons.length}</span></span></summary>
-            ${m.lessons.map((l) => { const q = store.data.quiz[l.id]; const now = cont && cont.id === l.id; return `<a class="lrow" href="#lesson.${l.id}" data-go="lesson.${l.id}"><span class="dot ${isDone(l.id) ? 'done' : isKnown(l) ? 'known' : now ? 'now' : ''}">${isDone(l.id) ? S.icon('check') : ''}</span><span class="t"><b>${esc(l.title)}</b><span>${l.min} мин${q ? ` · тест ${q.s}/${q.t}` : ''}${isKnown(l) && !isDone(l.id) ? ' · ты это делал' : ''}${now ? ' · следующий' : ''}</span></span>${xpBadge(isDone(l.id), 40)}</a>`; }).join('')}</details>`;
+          const open = (cont && cont.module && cont.module.id === m.id) || (!m.lessons.length && mods.length === 1);
+          const st = m.lessons.length ? modStars(m) : 0;
+          const planned = m.plan.filter((p) => !m.lessons.some((l) => l.id === p.id));
+          return `<details class="mod"${open ? ' open' : ''}><summary>${ringNode(m.lessons.length ? md / m.lessons.length : 0, m.n, m.lessons.length > 0 && md === m.lessons.length)}<span class="mt"><b>${esc(m.title)}</b><span>${esc(m.sub)}</span></span><span class="side">${starsHTML(st)}<span>${md}/${m.lessons.length}${planned.length ? ` · +${planned.length} скоро` : ''}</span></span></summary>
+            ${m.lessons.map((l) => { const q = store.data.quiz[l.id]; const now = cont && cont.id === l.id; return `<a class="lrow" href="#lesson.${l.id}" data-go="lesson.${l.id}"><span class="dot ${isDone(l.id) ? 'done' : isKnown(l) ? 'known' : now ? 'now' : ''}">${isDone(l.id) ? S.icon('check') : ''}</span><span class="t"><b>${esc(l.title)}</b><span>${l.min} мин${q ? ` · тест ${q.s}/${q.t}` : ''}${isKnown(l) && !isDone(l.id) ? ' · ты это делал' : ''}${now ? ' · следующий' : ''}${S.reworked[l.id] ? ' · новая версия' : ''}</span></span>${xpBadge(isDone(l.id), 40)}</a>`; }).join('')}
+            ${planned.map((p) => `<div class="lrow" style="opacity:.55"><span class="dot"></span><span class="t"><b>${esc(p.title)}</b><span>скоро</span></span>${S.icon('lock')}</div>`).join('')}</details>`;
         }).join('')}</div>
         <p class="small muted" style="margin-top:22px">★ — модуль пройден, ★★ — тесты в среднем от 80 %, ★★★ — все тесты на 100 %.</p>
       </div>`;
@@ -143,10 +152,12 @@
       if (i < 0) return `<div class="wrap"><div class="empty">Урок не найден. ${B.go('course', 'К списку уроков')}</div></div>`;
       const l = L[i];
       const prev = L[i - 1], next = L[i + 1];
-      const mi = S.course.indexOf(l.module);
       const q = store.data.quiz[l.id];
-      return `<div class="wrap">${crumbs([['Курс', 'course'], [`Модуль ${mi}`, null]])}
+      const plan = S.programLessons().find((x) => x.id === l.id);
+      const needs = plan ? plan.needs.map((nid) => S.lessonIndex[nid]).filter((x) => x && !isDone(x.id)) : [];
+      return `<div class="wrap">${crumbs([['Курс', l.module.track === 'shchit' ? 'course' : 'course.' + l.module.track], [modLabel(l.module), null]])}
         <div class="page-head" style="margin-top:8px"><div class="row"><span class="badge">${S.icon('book')}Урок ${l.module.lessons.indexOf(l.module.lessons.find((x) => x.id === l.id)) + 1} из ${l.module.lessons.length}</span><span class="badge">${S.icon('clock')}${l.min} мин</span>${xpBadge(isDone(l.id), 40)}${isKnown(l) ? '<span class="badge info">ты это делал</span>' : ''}</div><h1 class="h1" style="margin-top:6px">${esc(l.title)}</h1><p class="small muted">${esc(l.module.title)}</p><div class="row" style="margin-top:8px">${S.tts.btn('Слушать урок')}</div></div>
+        ${needs.length ? `<div class="flash warn" style="margin-bottom:16px"><b>Сначала пройди:</b> ${needs.map((x) => `<a href="#lesson.${x.id}" data-go="lesson.${x.id}">${esc(x.title)}</a>`).join(', ')}. Этот урок опирается на них.</div>` : ''}
         <article class="prose">${l.html}</article>
         ${l.quiz && l.quiz.length ? `<section class="stack" style="margin-top:32px"><div class="row"><h2 class="h2" style="flex:1">Проверь себя</h2>${q ? `<span class="badge ${q.s === q.t ? 'ok' : 'warn'}">лучший: ${q.s}/${q.t}</span>` : '<span class="badge xp">до +25 XP</span>'}</div><p class="small muted" style="margin-top:-8px">Зачёт — от половины верных ответов (урок засчитается сам). Все верные — бонус.</p>${S.quizHTML(l.quiz, l.id)}</section>` : ''}
         <div class="row" style="margin-top:20px"><button class="btn ${isDone(l.id) ? '' : 'game'}" type="button" data-done>${S.icon('check')}${isDone(l.id) ? 'Пройден' : 'Отметить пройденным'}</button><button class="btn" type="button" data-ask>${S.icon('chat')}Спросить Claude</button></div>
@@ -821,7 +832,7 @@
   S.tts.handlers.lesson = (id) => {
     const l = lessonById(id);
     if (!l) return null;
-    return { title: l.title, paras: [`Модуль ${S.course.indexOf(l.module)}: ${l.module.title}.`, `Урок: ${l.title}.`].concat(S.tts.fromHTML(l.html), l.quiz && l.quiz.length ? S.tts.quizText(l.quiz) : []) };
+    return { title: l.title, paras: [`${modLabel(l.module)}: ${l.module.title}.`, `Урок: ${l.title}.`].concat(S.tts.fromHTML(l.html), l.quiz && l.quiz.length ? S.tts.quizText(l.quiz) : []) };
   };
   S.tts.handlers.project = (id) => {
     const p = S.projects.find((x) => x.id === id);
@@ -852,6 +863,7 @@
   S.aliases = { ai: (arg) => (S.env === 'artifact' ? { name: 'ai', arg } : { name: 'claude', arg: 'how' }) };
 
   /* ================= ЗАПУСК ================= */
+  S.buildCourse();
   S.boot();
   if (S.ai && S.ai.init) S.ai.init();
 })();

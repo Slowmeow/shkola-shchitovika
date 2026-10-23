@@ -6,7 +6,7 @@ const path = require('path');
 const vm = require('vm');
 
 const DEFAULT = ['core', 'rpg', 'svg', 'data-glossary', 'data-formulas', 'data-devices', 'data-norms', 'data-tables',
-  'course-1', 'course-2', 'course-3', 'course-4', 'engine', 'render-panel', 'projects', 'control', 'games', 'photos'];
+  'course-1', 'course-2', 'course-3', 'course-4', 'cards', 'engine', 'render-panel', 'projects', 'control', 'games', 'photos', 'tts', 'program'];
 
 module.exports = function load(root, files) {
   root = root || path.join(__dirname, '..');
@@ -30,5 +30,6 @@ module.exports = function load(root, files) {
   ctx.self = ctx;
   vm.createContext(ctx);
   for (const f of files || DEFAULT) vm.runInContext(fs.readFileSync(path.join(root, 'js', f + '.js'), 'utf8'), ctx, { filename: f + '.js' });
+  if (ctx.SHK.buildCourse) ctx.SHK.buildCourse();
   return ctx.SHK;
 };
