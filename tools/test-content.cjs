@@ -6,7 +6,7 @@ const PAGE = [...require('fs').readFileSync(require('path').join(__dirname, '..'
 const S = require('./load-app.cjs')(undefined, PAGE.filter((f) => f !== 'ai' && f !== 'app'));
 let n = 0;
 const bad = (m) => { n++; if (n <= 60) console.log('✗ ' + m); };
-const views = new Set(['home', 'course', 'lesson', 'ref', 'formula', 'device', 'norm', 'practice', 'game', 'project', 'photos', 'builder', 'claude', 'profile', 'ai']);
+const views = new Set(['home', 'course', 'lesson', 'ref', 'formula', 'device', 'norm', 'practice', 'game', 'project', 'photos', 'builder', 'claude', 'profile', 'ai', 'field']);
 const lessons = S.course.reduce((a, m) => a.concat(m.lessons.map((l) => Object.assign({ m: m.id }, l))), []);
 const ids = new Set();
 lessons.forEach((l) => { if (ids.has(l.id)) bad('урок с повтором id ' + l.id); ids.add(l.id); });
@@ -81,6 +81,12 @@ const ach = S.rpg.ACH; if (new Set(ach.map((a) => a.id)).size !== ach.length) ba
 ach.forEach((a) => { if (!S.icons[a.ic]) bad(`достижение ${a.id}: нет иконки ${a.ic}`); });
 S.course.forEach((m) => { if (m.id !== 'm-other' && !ach.find((a) => a.id === m.id)) bad(`модуль ${m.id} без достижения`); });
 if (S.course.some((m) => m.id === 'm-other')) bad('есть уроки вне программы');
+// раздел «Объект»: ссылки пунктов ведут на существующие экраны, у правил есть норма и карточка
+const FD = S.field || {};
+(FD.stages || []).forEach((s) => s.items.forEach((x, i) => { if (x[1]) route(x[1], `этап ${s.id} пункт ${i + 1}`); if (x[2] && !x[3]) bad(`этап ${s.id} пункт ${i + 1}: вопрос без ответа`); }));
+(FD.rules || []).forEach((r) => { if (!r.norm || !r.q || !r.a || !r.why) bad(`правило ${r.id}: нет нормы, причины или карточки`); });
+(FD.measures || []).forEach((m) => { if (!m.q || !m.a || !m.ref) bad(`замер ${m.id}: нет карточки или основания`); });
+(FD.videos || []).forEach((v) => v.claims.forEach((c) => { if (!["ok", "part", "bad", "prac"].includes(c.v) || !c.text || !c.norm) bad(`разбор ${v.id} совет ${c.n}: неполный`); }));
 // карточки: ключи — существующие уроки, ответы не пустые
 Object.entries(S.cardsData || {}).forEach(([lid, cs]) => { if (!ids.has(lid)) bad(`карточки для несуществующего урока ${lid}`); cs.forEach((c, i) => { if (!c[0] || !c[1]) bad(`карточка ${lid}#${i + 1} пустая`); }); });
 // программа: зависимости ссылаются на темы программы

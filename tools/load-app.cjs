@@ -6,7 +6,7 @@ const path = require('path');
 const vm = require('vm');
 
 const DEFAULT = ['core', 'rpg', 'svg', 'data-glossary', 'data-formulas', 'data-devices', 'data-norms', 'data-tables',
-  'course-1', 'course-2', 'course-3', 'course-4', 'c00', 'c01', 'c02', 'c03', 'c04', 'cards', 'engine', 'render-panel', 'projects', 'control', 'games', 'photos', 'tts', 'program'];
+  'course-1', 'course-2', 'course-3', 'course-4', 'c00', 'c01', 'c02', 'c03', 'c04', 'cards', 'engine', 'render-panel', 'projects', 'control', 'games', 'photos', 'tts', 'program', 'field-rules', 'field-stages', 'field'];
 
 module.exports = function load(root, files) {
   root = root || path.join(__dirname, '..');

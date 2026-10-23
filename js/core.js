@@ -777,6 +777,7 @@
     { id: 'home', label: 'Главная', icon: 'home' },
     { id: 'course', label: 'Курс', icon: 'book' },
     { id: 'ref', label: 'Справочник', icon: 'ref' },
+    { id: 'field', label: 'Объект', icon: 'tool' },
     { id: 'practice', label: 'Практика', icon: 'game' },
     { id: 'builder', label: 'Конструктор', icon: 'panel' },
     { id: 'claude', label: 'Разборы', icon: 'inbox', x: true, sep: true },

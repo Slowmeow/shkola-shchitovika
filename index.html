@@ -138,12 +138,13 @@ button,input,select,textarea{font:inherit;color:inherit}
 .me-btn .lv{font-family:var(--font-pixel);font-size:9px;line-height:1;padding:4px 6px 3px;border-radius:999px;background:linear-gradient(135deg,var(--lvl-a),var(--lvl-b));color:#fff;letter-spacing:.02em}
 .xpstrip{position:sticky;top:calc(var(--hdr) + env(safe-area-inset-top,0px));z-index:29;height:3px;background:var(--hdr-bg)}
 .xpstrip>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--xp-a),var(--xp-b));box-shadow:0 0 8px var(--xp-b);transition:width .6s cubic-bezier(.2,.8,.2,1)}
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg);border-top:1px solid var(--border);
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;display:grid;grid-template-columns:repeat(6,1fr);background:var(--bg);border-top:1px solid var(--border);
   padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
 .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:var(--tabh);font-size:11px;font-weight:500;color:var(--fg-muted);position:relative;min-width:0}
 .tab .ic{width:22px;height:22px}
 .tab span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px}
 .tab.x{display:none}
+@media (max-width:420px){.tab{font-size:10px}.tab .ic{width:20px;height:20px}}
 .tab[aria-current="page"]{color:var(--fg);font-weight:600}
 .tab[aria-current="page"] .ic{color:var(--accent)}
 .tab[aria-current="page"]::before{content:"";position:absolute;top:-1px;left:24%;right:24%;height:2px;border-radius:0 0 2px 2px;background:var(--unl)}
@@ -693,34 +694,37 @@ button.issue{border:0;background:none;width:100%;text-align:left;cursor:pointer}
   </div>
 </div>
 
-<script src="js/core.js?v=28b4379106"></script>
-<script src="js/rpg.js?v=28b4379106"></script>
-<script src="js/svg.js?v=28b4379106"></script>
-<script src="js/data-glossary.js?v=28b4379106"></script>
-<script src="js/data-formulas.js?v=28b4379106"></script>
-<script src="js/data-devices.js?v=28b4379106"></script>
-<script src="js/data-norms.js?v=28b4379106"></script>
-<script src="js/data-tables.js?v=28b4379106"></script>
-<script src="js/course-1.js?v=28b4379106"></script>
-<script src="js/course-2.js?v=28b4379106"></script>
-<script src="js/course-3.js?v=28b4379106"></script>
-<script src="js/course-4.js?v=28b4379106"></script>
-<script src="js/c00.js?v=28b4379106"></script>
-<script src="js/c01.js?v=28b4379106"></script>
-<script src="js/c02.js?v=28b4379106"></script>
-<script src="js/c03.js?v=28b4379106"></script>
-<script src="js/c04.js?v=28b4379106"></script>
-<script src="js/cards.js?v=28b4379106"></script>
-<script src="js/engine.js?v=28b4379106"></script>
-<script src="js/render-panel.js?v=28b4379106"></script>
-<script src="js/projects.js?v=28b4379106"></script>
-<script src="js/control.js?v=28b4379106"></script>
-<script src="js/games.js?v=28b4379106"></script>
-<script src="js/photos.js?v=28b4379106"></script>
-<script src="js/ai.js?v=28b4379106"></script>
-<script src="js/tts.js?v=28b4379106"></script>
-<script src="js/program.js?v=28b4379106"></script>
-<script src="js/sync.js?v=28b4379106"></script>
-<script src="js/app.js?v=28b4379106"></script>
+<script src="js/core.js?v=91034e0281"></script>
+<script src="js/rpg.js?v=91034e0281"></script>
+<script src="js/svg.js?v=91034e0281"></script>
+<script src="js/data-glossary.js?v=91034e0281"></script>
+<script src="js/data-formulas.js?v=91034e0281"></script>
+<script src="js/data-devices.js?v=91034e0281"></script>
+<script src="js/data-norms.js?v=91034e0281"></script>
+<script src="js/data-tables.js?v=91034e0281"></script>
+<script src="js/course-1.js?v=91034e0281"></script>
+<script src="js/course-2.js?v=91034e0281"></script>
+<script src="js/course-3.js?v=91034e0281"></script>
+<script src="js/course-4.js?v=91034e0281"></script>
+<script src="js/c00.js?v=91034e0281"></script>
+<script src="js/c01.js?v=91034e0281"></script>
+<script src="js/c02.js?v=91034e0281"></script>
+<script src="js/c03.js?v=91034e0281"></script>
+<script src="js/c04.js?v=91034e0281"></script>
+<script src="js/cards.js?v=91034e0281"></script>
+<script src="js/engine.js?v=91034e0281"></script>
+<script src="js/render-panel.js?v=91034e0281"></script>
+<script src="js/projects.js?v=91034e0281"></script>
+<script src="js/control.js?v=91034e0281"></script>
+<script src="js/games.js?v=91034e0281"></script>
+<script src="js/photos.js?v=91034e0281"></script>
+<script src="js/ai.js?v=91034e0281"></script>
+<script src="js/tts.js?v=91034e0281"></script>
+<script src="js/program.js?v=91034e0281"></script>
+<script src="js/field-rules.js?v=91034e0281"></script>
+<script src="js/field-stages.js?v=91034e0281"></script>
+<script src="js/field.js?v=91034e0281"></script>
+<script src="js/sync.js?v=91034e0281"></script>
+<script src="js/app.js?v=91034e0281"></script>
 </body>
 </html>
