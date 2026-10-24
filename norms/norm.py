@@ -44,12 +44,20 @@ DOCS = {
                     'src': ['https://meganorm.ru/Data2/1/4293720/4293720404.htm']},
     'ГОСТ31996': {'file': 'gost-31996.txt', 'title': 'ГОСТ 31996-2012 «Кабели силовые с пластмассовой изоляцией на номинальное напряжение 0,66; 1 и 3 кВ» (с изм. 1)',
                   'src': ['https://meganorm.ru/mega_doc/norm/gost_gosudarstvennyj-standart/0/gost_31996-2012_mezhgosudarstvennyy_standart_kabeli_silovye.html']},
+    'ГОСТ61008': {'file': 'gost-iec-61008-1.txt', 'title': 'ГОСТ IEC 61008-1-2020 «Выключатели автоматические, управляемые дифференциальным током, бытового и аналогичного назначения без встроенной защиты от сверхтоков. Часть 1»',
+                  'src': ['https://meganorm.ru/Data2/1/4293719/4293719492.htm']},
+    'ГОСТ60269': {'file': 'gost-iec-60269-1.txt', 'title': 'ГОСТ IEC 60269-1-2016 «Предохранители низковольтные плавкие. Часть 1. Общие требования»',
+                  'src': ['https://meganorm.ru/mega_doc/norm/gost_gosudarstvennyj-standart/1/gost_IEC_60269-1-2016_mezhgosudarstvennyy_standart.html']},
+    'ГОСТ32144': {'file': 'gost-32144.txt', 'title': 'ГОСТ 32144-2013 «Нормы качества электрической энергии в системах электроснабжения общего назначения»',
+                  'src': ['https://www.helpeng.ru/public/normdoc/gost/gost_32144-2013.pdf']},
     'ГОСТ31565': {'file': 'gost-31565.txt', 'title': 'ГОСТ 31565-2012 «Кабельные изделия. Требования пожарной безопасности»',
                   'src': ['https://meganorm.ru/Data2/1/4293780/4293780771.htm']},
 }
 # порядок важен: сначала точные названия ГОСТов, потом короткое «ГОСТ»
 ALIASES = {'ПУЭ': 'ПУЭ', 'PUE': 'ПУЭ', 'ПОТЭЭ': 'ПОТЭЭ', 'POTEE': 'ПОТЭЭ', 'СП256': 'СП256', 'СП': 'СП256', 'SP256': 'СП256',
-           'ГОСТ12.1.038': 'ГОСТ12.1.038', 'ГОСТ21.613': 'ГОСТ21.613', 'ГОСТР21.101': 'ГОСТР21.101', 'ГОСТ31996': 'ГОСТ31996', 'ГОСТ31565': 'ГОСТ31565', 'ГОСТ': 'ГОСТ12.1.038'}
+           'ГОСТ12.1.038': 'ГОСТ12.1.038', 'ГОСТ21.613': 'ГОСТ21.613', 'ГОСТР21.101': 'ГОСТР21.101', 'ГОСТ31996': 'ГОСТ31996', 'ГОСТ31565': 'ГОСТ31565',
+           'ГОСТIEC61008': 'ГОСТ61008', 'ГОСТ61008': 'ГОСТ61008', 'ГОСТIEC60269': 'ГОСТ60269', 'ГОСТ60269': 'ГОСТ60269', 'ГОСТ32144': 'ГОСТ32144',
+           'ГОСТ': 'ГОСТ12.1.038'}
 
 
 def get(url: str) -> bytes:
@@ -86,6 +94,16 @@ def docx_to_text(raw: bytes) -> str:
     return '\n'.join(out)
 
 
+def pdf_to_text(raw: bytes) -> str:
+    try:
+        from pypdf import PdfReader  # pip install pypdf
+    except ImportError:
+        raise SystemExit('Для PDF нужен пакет pypdf: pip install pypdf')
+    import logging
+    logging.disable(logging.WARNING)
+    return '\n'.join((p.extract_text() or '') for p in PdfReader(io.BytesIO(raw)).pages)
+
+
 def fetch(only=None):
     TEXT.mkdir(parents=True, exist_ok=True)
     for key, d in DOCS.items():
@@ -95,7 +113,7 @@ def fetch(only=None):
         for url in d['src']:
             print('скачиваю', url)
             raw = get(url)
-            parts.append(docx_to_text(raw) if url.endswith('.docx') else html_to_text(raw))
+            parts.append(docx_to_text(raw) if url.endswith('.docx') else pdf_to_text(raw) if url.endswith('.pdf') else html_to_text(raw))
         (TEXT / d['file']).write_text(f"# {d['title']}\n# Источники: {', '.join(d['src'])}\n" + '\n'.join(parts), encoding='utf-8', newline='\n')
         print(f'  {key}: {sum(len(p) for p in parts)} символов')
 
@@ -110,6 +128,9 @@ CLAUSE = {
     'ГОСТР21.101': re.compile(r'^\s*(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)\.?\s+(?=[А-Я])'),
     'ГОСТ31996': re.compile(r'^\s*(\d{1,2}(?:\.\d{1,2}){1,3})\.?\s+(?=[А-Я])'),
     'ГОСТ31565': re.compile(r'^\s*(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)\.?\s+(?=[А-Я])'),
+    'ГОСТ61008': re.compile(r'^\s*(\d{1,2}(?:\.\d{1,2}){1,3})\.?\s+(?=[А-Я])'),
+    'ГОСТ60269': re.compile(r'^\s*(\d{1,2}(?:\.\d{1,2}){1,3})\.?\s+(?=[А-Я])'),
+    'ГОСТ32144': re.compile(r'^\s*(\d{1,2}(?:\.\d{1,2}){1,3})\.?\s+(?=[А-Я])'),
 }
 TABLE = re.compile(r'^\s*Таблица\s+(?:№\s*)?([\d.А-Я]+?)\.?(?:\s|$)')
 
