@@ -1,0 +1,202 @@
+{
+ "mcb-2p": {
+  "file": "shk-real-mcb-2p.webp",
+  "title": "File:Circuit breaker 2 pole on DIN rail.JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:Circuit_breaker_2_pole_on_DIN_rail.JPG",
+  "author": "Kae",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "w": 840,
+  "h": 900
+ },
+ "mcb-1p": {
+  "file": "shk-real-mcb-1p.webp",
+  "title": "File:Circuit breaker BA63 EKF.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Circuit_breaker_BA63_EKF.jpg",
+  "author": "Alexceo",
+  "license": "CC0",
+  "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "w": 360,
+  "h": 900
+ },
+ "rcd-2p": {
+  "file": "shk-real-rcd-2p.webp",
+  "title": "File:Residual Current Device F202.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Residual_Current_Device_F202.jpg",
+  "author": "ABB ltd",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "w": 531,
+  "h": 892
+ },
+ "rcd-4p": {
+  "file": "shk-real-rcd-4p.webp",
+  "title": "File:DDR Legrand de 30 mA.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:DDR_Legrand_de_30_mA.jpg",
+  "author": "France64160",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "w": 900,
+  "h": 579
+ },
+ "rcbo-ru": {
+  "file": "shk-real-rcbo-ru.webp",
+  "title": "File:Диференційний автомат PF.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:%D0%94%D0%B8%D1%84%D0%B5%D1%80%D0%B5%D0%BD%D1%86%D1%96%D0%B9%D0%BD%D0%B8%D0%B9_%D0%B0%D0%B2%D1%82%D0%BE%D0%BC%D0%B0%D1%82_PF.jpg",
+  "author": "Олег Граченко",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "w": 900,
+  "h": 675
+ },
+ "rcbo-chint": {
+  "file": "shk-real-rcbo-chint.webp",
+  "title": "File:Differential residual current circuit interrupter.JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:Differential_residual_current_circuit_interrupter.JPG",
+  "author": "Dmitry G",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "w": 525,
+  "h": 900
+ },
+ "afdd": {
+  "file": "shk-real-afdd.webp",
+  "title": "File:Modulo AFD.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Modulo_AFD.jpg",
+  "author": "Ariel Dyfort",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "w": 709,
+  "h": 532
+ },
+ "spd-module": {
+  "file": "shk-real-spd-module.webp",
+  "title": "File:Überspannungschutz für die Verteilerinstallation auf der Hutschiene-solo.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:%C3%9Cberspannungschutz_f%C3%BCr_die_Verteilerinstallation_auf_der_Hutschiene-solo.jpg",
+  "author": "WagnerTh",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "w": 512,
+  "h": 900
+ },
+ "meter-disk": {
+  "file": "shk-real-meter-disk.webp",
+  "title": "File:Argentinian electricity meter.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Argentinian_electricity_meter.jpg",
+  "author": "Yorenuncio",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "w": 900,
+  "h": 673
+ },
+ "board": {
+  "file": "shk-real-board.webp",
+  "title": "File:Armoire electrique domotique.JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:Armoire_electrique_domotique.JPG",
+  "author": "Arnaud 25",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+  "w": 640,
+  "h": 480
+ },
+ "din-rail": {
+  "file": "shk-real-din-rail.webp",
+  "title": "File:DIN rail.JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:DIN_rail.JPG",
+  "author": "Dmitry G",
+  "license": "Public domain",
+  "licenseUrl": "",
+  "w": 900,
+  "h": 507
+ },
+ "terminals": {
+  "file": "shk-real-terminals.webp",
+  "title": "File:Transistive terminals for 10mm wires.JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:Transistive_terminals_for_10mm_wires.JPG",
+  "author": "Dmitry G",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "w": 900,
+  "h": 675
+ },
+ "ferrules": {
+  "file": "shk-real-ferrules.webp",
+  "title": "File:Gummischlauchleitung H07RN-F 5G6 Aderendhülsen CEE 2012 04 03.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Gummischlauchleitung_H07RN-F_5G6_Aderendh%C3%BClsen_CEE_2012_04_03.jpg",
+  "author": "Bahntech",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "w": 900,
+  "h": 675
+ },
+ "twin-ferrule": {
+  "file": "shk-real-twin-ferrule.webp",
+  "title": "File:SOFAMEL P-255140.JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:SOFAMEL_P-255140.JPG",
+  "author": "Dmitry G",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "w": 900,
+  "h": 608
+ },
+ "comb": {
+  "file": "shk-real-comb.webp",
+  "title": "File:Hager busbar 10mm for circuit breakers.JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:Hager_busbar_10mm_for_circuit_breakers.JPG",
+  "author": "Dmitry G",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "w": 900,
+  "h": 507
+ },
+ "busbars-n-pe": {
+  "file": "shk-real-busbars-n-pe.webp",
+  "title": "File:Additional busbars.JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:Additional_busbars.JPG",
+  "author": "Dmitry G",
+  "license": "Public domain",
+  "licenseUrl": "",
+  "w": 900,
+  "h": 675
+ },
+ "gzsh": {
+  "file": "shk-real-gzsh.webp",
+  "title": "File:Main earthing busbar.JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:Main_earthing_busbar.JPG",
+  "author": "Dmitry G",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "w": 900,
+  "h": 676
+ },
+ "megger": {
+  "file": "shk-real-megger.webp",
+  "title": "File:MJ15 by Megger.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:MJ15_by_Megger.jpg",
+  "author": "Megger Ltd.",
+  "license": "CC BY 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+  "w": 810,
+  "h": 667
+ },
+ "megger-crank": {
+  "file": "shk-real-megger-crank.webp",
+  "title": "File:Misuratore d'isolamento (quadrante).JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:Misuratore_d%27isolamento_(quadrante).JPG",
+  "author": "Umberto NURS",
+  "license": "CC BY-SA 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+  "w": 900,
+  "h": 900
+ },
+ "fuse-holder": {
+  "file": "shk-real-fuse-holder.webp",
+  "title": "File:GE 676558.JPG",
+  "page": "https://commons.wikimedia.org/wiki/File:GE_676558.JPG",
+  "author": "Dmitry G",
+  "license": "CC BY-SA 3.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+  "w": 900,
+  "h": 675
+ }
+}

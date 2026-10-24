@@ -8,6 +8,7 @@ const PAGE = [...fs.readFileSync(path.join(ROOT, 'app.html'), 'utf8').matchAll(/
 const S = require('./load-app.cjs')(undefined, PAGE.filter((f) => f !== 'ai' && f !== 'app'));
 
 const SITE = 'https://slowmeow.github.io/shkola-shchitovika/';
+const esc = S.esc;
 const ROOT_DECK = 'Школа щитовика';
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -31,6 +32,10 @@ const count = (t) => { stats.byType[t] = (stats.byType[t] || 0) + 1; };
 // картинки из anki/media (рисует tools/render-media.mjs); в колоду их кладёт build_anki.py по ссылкам <img src>
 const MEDIA_IDX = path.join(ROOT, 'anki', 'media', 'index.json');
 const media = fs.existsSync(MEDIA_IDX) ? JSON.parse(fs.readFileSync(MEDIA_IDX, 'utf8')) : {};
+// настоящие фото из Wikimedia Commons (tools/fetch_photos.py): автор и лицензия — в поле «Источник»
+const REAL_IDX = path.join(ROOT, 'anki', 'media', 'real.json');
+const real = fs.existsSync(REAL_IDX) ? JSON.parse(fs.readFileSync(REAL_IDX, 'utf8')) : {};
+Object.values(real).forEach((x) => { media[x.file] = { kind: 'real', w: x.w, h: x.h }; });
 const img = (name, max) => (media[name] ? `<div style="margin:10px 0"><img src="${name}" width="${Math.min(media[name].w, max || 560)}" style="max-width:100%;height:auto"></div>` : '');
 const stems = (s) => new Set((String(s).toLowerCase().match(/[а-яё]{5,}/g) || []).map((w) => w.slice(0, 5)));
 const figLog = [];
@@ -149,6 +154,9 @@ if (Object.keys(media).length) {
       mk('curve|2.55', 'Графики', `${SITE}#gear.curves`, img('shk-curve-B.webp') + 'За какое время автомат на ток до 32 А обязан отключить ток 2,55·In?', 'От 1 до 60 с.', 'Для автоматов больше 32 А — от 1 до 120 с.', CSRC)] : [])
     .concat(SYS.filter(([k]) => media[`shk-sys-${k}.webp`]).map(([k, name, why]) => mk(`sys|${k}`, 'Графики', `${SITE}#lesson.earth`, img(`shk-sys-${k}.webp`) + 'Какая система заземления на схеме? По какому признаку это видно?', `<b>${name}</b>`, why, 'ПУЭ п. 1.7.3')))
     .concat(media['shk-rcd-types.webp'] ? [mk('rcd-types', 'Графики', `${SITE}#gear.rcd-types`, 'Какую форму тока утечки обнаруживают УЗО типов AC, A, F и B?', 'AC — синусоидальный переменный; A — ещё и пульсирующий постоянный; F — ещё и смешанной частоты; B — ещё и гладкий постоянный.' + img('shk-rcd-types.webp'), 'Каждый следующий тип обнаруживает всё, что предыдущий. Для техники с электроникой нужен как минимум тип A.', 'ГОСТ IEC 61008-1; МЭК 62423')] : []));
+  const RP =JSON.parse(fs.readFileSync(path.join(__dirname, 'real-photos.json'), 'utf8')).photos;
+  see('05 Настоящие фото', 'Фотографии настоящих аппаратов и материалов (Wikimedia Commons, свободные лицензии; автор указан на каждой карточке).', RP.filter((x) => real[x.id]).map((x) => { const m = real[x.id];
+    return mk(`real|${x.id}`, 'Настоящие фото', `${SITE}#gear`, img(m.file, 420) + clean(x.q), clean(x.a), clean(x.why), `Фото: ${esc(m.author)}, ${esc(m.license)}, Wikimedia Commons — <a href="${m.page}">${esc(m.title.replace(/^File:/, ''))}</a>`); }));
 }
 
 // термины и формулы без урока — в отдельные колоды

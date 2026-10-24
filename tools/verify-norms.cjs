@@ -50,6 +50,7 @@ const F = S.field || {};
 (S.glossary || []).forEach((g) => add(`словарь · ${g.id}`, `${g.term}: ${g.def}`));
 (S.formulas || []).forEach((f) => add(`формула · ${f.id}`, `${f.about || ''} ${f.ex || ''}`));
 (S.tables || []).forEach((t) => add(`таблица · ${t.id}`, `${t.title} ${t.about || ''} ${t.cap || ''}`));
+JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'real-photos.json'), 'utf8')).photos.forEach((x) => add(`фото ${x.id}`, `${x.q} ${x.a} ${x.why}`));
 (S.exams || []).forEach((x) => x.pool.forEach((q, i) => add(`экзамен ${x.id} #${i + 1}`, `${q.q} ${q.a[q.c]}. ${q.e} (${q.r})`)));
 
 // 2. поиск ссылок
