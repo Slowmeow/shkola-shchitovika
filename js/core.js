@@ -781,6 +781,7 @@
     { id: 'field', label: 'Объект', icon: 'tool' },
     { id: 'practice', label: 'Практика', icon: 'game' },
     { id: 'builder', label: 'Конструктор', icon: 'panel' },
+    { id: 'editor', label: 'Редактор', icon: 'layers' },
     { id: 'claude', label: 'Разборы', icon: 'inbox', x: true, sep: true },
     { id: 'profile', label: 'Профиль', icon: 'user', x: true }
   ];

@@ -36,8 +36,9 @@
 <p class="small muted">Вводной: ${inp ? S.esc(`${inp.type === 'sw' ? 'выключатель нагрузки' : 'автомат'} ${inp.poles}P ${inp.type === 'sw' ? '' : inp.curve || ''}${inp.In} А`) : '—'} · корпус ${S.esc(R.enclosure.name)} · аппаратов ${R.devices.length}</p>
 ${B.tbl(['№', 'Линия', 'Защита', 'Кабель', 'Фаза', 'Ток, А'], rows)}
 <ul class="small" style="margin:0;padding-left:18px">${R.checks.map((c) => `<li>${mark[c.level] || '•'} ${S.esc(c.text)}${c.ref ? ` <span class="muted">(${S.esc(c.ref)})</span>` : ''}</li>`).join('')}</ul>
-<div class="row"><button class="btn primary" type="button" data-load>${S.icon('panel')}Открыть в конструкторе</button><span class="small muted">там видны схема, раскладка, провода и материалы</span></div></div>`;
+<div class="row"><button class="btn primary" type="button" data-load>${S.icon('panel')}Открыть в конструкторе</button><button class="btn" type="button" data-ed>${S.icon('edit')}В редакторе щита</button><span class="small muted">там видны схема, раскладка, провода и материалы</span></div></div>`;
     el.querySelector('[data-load]').addEventListener('click', () => S.loadIntoBuilder(make(E.newLine)));
+    el.querySelector('[data-ed]').addEventListener('click', () => S.openInEditor && S.openInEditor(make(E.newLine)));
   };
   S.widgets.ctl = (el) => { if (S.mountControl) S.mountControl(el, el.dataset.ctl); };
 

@@ -331,6 +331,7 @@
     const stepsDone = () => opts.pid && store.data.xp['ps:' + opts.pid];
     const summary = `<div class="row" style="gap:6px"><span class="badge">${R1.three ? '3 фазы' : '1 фаза'} · ${S.fmt(R1.cfg.kw)} кВт</span><span class="badge">вводной ${R1.devices.find((d) => d.role === 'input').curve || ''}${R1.totals.inRating}</span><span class="badge">${R1.devices.length} аппаратов</span><span class="badge">${R1.enclosure.modules} мод.</span>${nErr ? `<span class="badge bad">${nErr} ошиб.</span>` : ''}${nWarn ? `<span class="badge warn">${nWarn} замеч.</span>` : ''}${!nErr && !nWarn ? '<span class="badge ok">замечаний нет</span>' : ''}${opts.pid ? (stepsDone() ? '<span class="badge xp got">✓ 40 XP</span>' : '<span class="badge xp">+40 XP за сборку</span>') : ''}</div>`;
     el.innerHTML = `<div class="stack">${summary}<div class="tabs-in" role="tablist">${RT.map(([k, t]) => `<button type="button" role="tab" data-rt="${k}" aria-selected="${k === tab}">${t}${k === 'checks' && (nErr || nWarn) ? ` <span class="counter">${nErr + nWarn}</span>` : ''}</button>`).join('')}</div><div data-rbody></div></div>`;
+    { const sm = el.querySelector('.stack > .row'); if (sm && S.openInEditor) { sm.insertAdjacentHTML('beforeend', `<button class="btn sm" type="button" data-toed>${S.icon('edit')}В редактор щита</button>`); sm.querySelector('[data-toed]').addEventListener('click', () => S.openInEditor(R1.cfg)); } }
     const body = el.querySelector('[data-rbody]');
     const legend = `<div class="legend">${['L1', 'L2', 'L3', 'N', 'PE'].map((c) => `<span><i class="wire-sw" style="${V.swatch(c)}"></i>${c === 'L1' ? (R1.three ? 'L1' : 'L — фаза') : c}</span>`).join('')}</div>`;
     const draw = () => {
@@ -476,6 +477,7 @@
   const saveDraft = () => { clearTimeout(draftT); draftT = setTimeout(() => { store.data.draft = { cfg: B_.cfg, id: B_.id, updated: Date.now() }; store.saveLocal(); store.scheduleRemote(); }, 800); };
   function loadIntoBuilder(cfg) { bInit(); B_.cfg = cloneCfg(cfg); B_.id = null; B_.pane = 'result'; saveDraft(); S.go('builder'); S.toast('Загружено в конструктор'); }
   S.loadIntoBuilder = loadIntoBuilder;
+  S.getBuilderCfg = () => { bInit(); return cloneCfg(B_.cfg); };
   const sel = (id, opts, val) => `<select class="inp" id="${id}">${opts.map(([v, t]) => `<option value="${esc(v)}"${String(v) === String(val) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
   const seg = (name, opts, val) => `<div class="seg" role="group" data-seg="${name}">${opts.map(([v, t]) => `<button type="button" data-v="${esc(v)}" aria-pressed="${String(v) === String(val)}">${esc(t)}</button>`).join('')}</div>`;
   const lineSummary = (l, R1) => {
