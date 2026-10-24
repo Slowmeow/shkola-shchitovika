@@ -21,7 +21,7 @@
 
   const KIND = {
     mcb: 'Автоматы', rcbo: 'Дифавтоматы', rcd: 'УЗО', sw: 'Выключатели нагрузки', spd: 'УЗИП', rn: 'Реле напряжения',
-    km: 'Контакторы', meter: 'Счётчики', xt: 'Кросс-модули и шины', blank: 'Заглушки'
+    km: 'Контакторы', meter: 'Счётчики', dbus: 'Шины N и PE на DIN-рейку', xt: 'Кросс-модули', blank: 'Заглушки'
   };
 
   /* w — ширина в модулях: число (на весь аппарат) или функция от числа полюсов */
@@ -64,6 +64,8 @@
     // общие
     { id: 'gen-meter1', brand: 'gen', series: 'Счётчик 1ф на DIN', kind: 'meter', poles: [1], w: 4, wOpts: [4, 5, 6, 7], note: 'ширину и клеммы — по паспорту счётчика' },
     { id: 'gen-meter3', brand: 'gen', series: 'Счётчик 3ф на DIN', kind: 'meter', poles: [3], w: 7, wOpts: [6, 7, 8, 9] },
+    { id: 'gen-dbusN', brand: 'gen', series: 'Шина N на DIN-рейку', kind: 'dbus', cond: 'N', poles: [1], w: 4, wOpts: [2, 3, 4, 5, 6, 8], note: 'изолированная шина в корпусе; число зажимов — по паспорту' },
+    { id: 'gen-dbusPE', brand: 'gen', series: 'Шина PE на DIN-рейку', kind: 'dbus', cond: 'PE', poles: [1], w: 4, wOpts: [2, 3, 4, 5, 6, 8], note: 'число зажимов — по паспорту' },
     { id: 'gen-blank', brand: 'gen', series: 'Заглушка', kind: 'blank', poles: [1], w: 1, wOpts: [0.5, 1, 2, 3, 4] }
   ];
 
@@ -86,6 +88,7 @@
     if (s.ma) { d.ma = opt.ma || (s.ma.includes(30) ? 30 : s.ma[0]); d.rt = opt.rt || (s.rt ? s.rt[0] : 'AC'); }
     if (s.cls) { d.cls = s.cls; d.scheme = poles === 4 ? '3+1' : poles === 2 ? '1+1' : String(poles); }
     if (s.kind === 'meter') d.mount = 'din';
+    if (s.kind === 'dbus') d.cond = s.cond || 'N';
     if (s.kind === 'xt') d.outs = (poles === 4 ? ['L1', 'L2', 'L3', 'N', 'L1', 'L2', 'L3', 'N'] : ['L', 'N', 'L', 'N', 'L', 'N', 'L', 'N']).map((c, i) => c + 'out' + i);
     return d;
   };

@@ -35,9 +35,9 @@
     out.push(r(g.x, g.y, g.w, g.h, BODY[d.brand || s.brand] || '#fff', '#6f7772', { rx: 1.6, w: 0.6 }));
     out.push(r(g.x + 0.6, g.y + 0.6, g.w - 1.2, 13, '#e6e9e7', null, { rx: 1 }), r(g.x + 0.6, g.y + g.h - 13.6, g.w - 1.2, 13, '#e6e9e7', null, { rx: 1 }));
     const fy = cy - 22.5;
-    if (d.type !== 'blank') out.push(r(g.x + 1.2, fy, g.w - 2.4, 45, '#fafbfa', '#b7bdb9', { rx: 1, w: 0.4 }));
+    if (d.type !== 'blank' && d.type !== 'dbus') out.push(r(g.x + 1.2, fy, g.w - 2.4, 45, '#fafbfa', '#b7bdb9', { rx: 1, w: 0.4 }));
     out.push(t(cx, fy - 2, d.id, 3.4, { wt: 700 }));
-    if (brand && d.type !== 'blank') out.push(t(cx, fy + 4.4, brand, g.w < 16 ? 2.3 : 2.6, { f: '#4a504c', wt: 700 }));
+    if (brand && d.type !== 'blank' && d.type !== 'dbus') out.push(t(cx, fy + 4.4, brand, g.w < 16 ? 2.3 : 2.6, { f: '#4a504c', wt: 700 }));
     const dark = '#33383a';
     if (d.type === 'mcb' || d.type === 'sw' || d.type === 'rcbo' || d.type === 'rcd') {
       const tw = Math.min(g.w - 5, 6 + (d.poles - 1) * 15);
@@ -61,6 +61,12 @@
       out.push(r(cx - 4, cy - 8, 8, 8, '#2f3437', null, { rx: 1 }), t(cx, cy + 8, 'A1–A2', 2.6), t(cx, cy + 14, ratingText(d), 3.4, { wt: 700 }));
     } else if (d.type === 'xt') {
       out.push(r(g.x + 3, cy - 10, g.w - 6, 20, '#e4e7e5', '#8a918d', { rx: 1, w: 0.4 }), t(cx, cy + 1.6, 'XT', 4, { wt: 700 }));
+    } else if (d.type === 'dbus') {
+      const pe = d.cond === 'PE';
+      out.push(r(g.x + 2, cy - 12, g.w - 4, 24, pe ? '#e9f3e6' : '#e6eefb', pe ? '#2f9b4a' : '#2a6cd6', { rx: 1.5, w: 0.6 }));
+      if (pe) out.push(`<rect x="${g.x + 2}" y="${cy - 3}" width="${g.w - 4}" height="6" style="fill:var(--w-pe)"/><rect x="${g.x + 2}" y="${cy - 3}" width="${g.w - 4}" height="6" style="fill:none;stroke:var(--w-pey);stroke-width:2;stroke-dasharray:4 4"/>`);
+      else out.push(r(g.x + 2, cy - 3, g.w - 4, 6, 'var(--w-n)', null));
+      out.push(t(cx, cy + 9.5, pe ? 'PE' : 'N', 4.2, { wt: 700, f: pe ? '#1d5e2c' : '#1c4a94' }));
     } else if (d.type === 'blank') {
       out.push(`<path d="M${g.x + 2} ${cy - 15} l${g.w - 4} 30" style="stroke:#b9bfbb;stroke-width:0.5"/>`);
     }
@@ -72,7 +78,7 @@
       lines.slice(0, 2).forEach((ln, i) => out.push(t(cx, fy + 40 + i * 3, ln.length > max ? ln.slice(0, max - 1) + '…' : ln, 2.3, { f: '#4a504c' })));
     } else if (d.label) out.push(`<title>${esc(d.label)}</title>`);
     K.terms(d).forEach((tm) => out.push(screw(tm.x, tm.y)));
-    const sel = o.sel && o.sel.kind === 'dev' && o.sel.id === d.id;
+    const sel = o.sel && ((o.sel.kind === 'dev' && o.sel.id === d.id) || (o.sel.kind === 'devs' && o.sel.ids.includes(d.id)));
     if (sel) out.push(r(g.x - 1.2, g.y - 1.2, g.w + 2.4, g.h + 2.4, 'none', 'var(--accent)', { rx: 2.4, w: 1.1 }));
     return `<g data-dev="${esc(d.id)}" style="cursor:${o.interactive ? 'grab' : 'default'}">${out.join('')}</g>`;
   }
@@ -93,6 +99,8 @@
       out.push(r(G.SD - 6, y - 17.5, Wd - 2 * G.SD + 12, 35, 'var(--rail)', '#8c938e', { w: 0.5 }), r(G.SD - 6, y - 4, Wd - 2 * G.SD + 12, 8, '#9aa19c', null));
       for (let x = G.SD; x < Wd - G.SD; x += 25) out.push(r(x, y - 2.6, 11, 5.2, '#7f8682', null, { rx: 2.6 }));
       out.push(t(G.SD - 9, y + 1.4, String(i + 1), 4, { f: '#7b827e', wt: 700 }));
+      const freeM = P.mods - P.devs.filter((d) => d.row === i).reduce((s, d) => s + d.w, 0);
+      out.push(t(Wd - G.SD - 1, K.rowTop(i) - 2.2, freeM > 0 ? `свободно ${String(freeM).replace('.', ',')} мод.` : 'рейка заполнена', 3, { a: 'end', f: freeM > 0 ? '#6f7772' : '#b0442c' }));
       for (let m = 0; m <= P.mods; m++) out.push(`<line x1="${G.SD + m * G.MOD}" y1="${K.rowTop(i) - 0.5}" x2="${G.SD + m * G.MOD}" y2="${K.rowTop(i) + 2.5}" style="stroke:#9aa19c;stroke-width:0.35"/>`);
     }
     return out.join('');
@@ -107,7 +115,7 @@
     for (let k = 0; k < b.n; k++) { const p = K.busSlot(P, b, k); out.push(screw(p.x, p.y)); }
     out.push(t(g.x, b.zone === 'top' ? g.y - g.h / 2 - 2.2 : g.y + g.h / 2 + 4.6, b.id + (isPE ? ' — защитная' : ' — нулевая'), 3, { a: 'start', wt: 700, f: '#2b2f2c' }));
     if (o.sel && o.sel.kind === 'bus' && o.sel.id === b.id) out.push(r(g.x - 2, g.y - g.h / 2 - 2, g.w + 4, g.h + 4, 'none', 'var(--accent)', { rx: 2, w: 1 }));
-    return `<g data-bus="${esc(b.id)}">${out.join('')}</g>`;
+    return `<g data-bus="${esc(b.id)}" style="cursor:${o.interactive ? 'grab' : 'default'}">${out.join('')}</g>`;
   }
 
   function comb(P, c) {
@@ -122,18 +130,19 @@
   }
 
   const widthOf = (mm2) => ({ 0.75: 1.1, 1: 1.2, 1.5: 1.35, 2.5: 1.6, 4: 1.9, 6: 2.2, 10: 2.7, 16: 3.1, 25: 3.6, 35: 4 }[mm2] || 1.6);
+  const f2 = (v) => Math.round(v * 100) / 100;
   const pathD = (pts) => {
     if (pts.length < 2) return '';
-    let d = `M${pts[0][0]} ${pts[0][1]}`;
+    let d = `M${f2(pts[0][0])} ${f2(pts[0][1])}`;
     for (let i = 1; i < pts.length - 1; i++) {
       const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
       const r1 = Math.min(3, Math.hypot(x1 - x0, y1 - y0) / 2, Math.hypot(x2 - x1, y2 - y1) / 2);
       const ax = x1 - Math.sign(x1 - x0) * r1, ay = y1 - Math.sign(y1 - y0) * r1;
       const bx = x1 + Math.sign(x2 - x1) * r1, by = y1 + Math.sign(y2 - y1) * r1;
-      d += ` L${ax} ${ay} Q${x1} ${y1} ${bx} ${by}`;
+      d += ` L${f2(ax)} ${f2(ay)} Q${f2(x1)} ${f2(y1)} ${f2(bx)} ${f2(by)}`;
     }
     const l = pts[pts.length - 1];
-    return d + ` L${l[0]} ${l[1]}`;
+    return d + ` L${f2(l[0])} ${f2(l[1])}`;
   };
 
   function wire(P, w, i, o) {
@@ -145,6 +154,8 @@
     const d = pathD(pts);
     const sel = o.sel && o.sel.kind === 'wire' && o.sel.id === w.id;
     let s = '';
+    /* при перетаскивании — только цветная линия, без тени, полосы PE и наконечников */
+    if (o.fast) return `<g data-wire="${esc(w.id)}"><path d="${d}" style="fill:none;stroke:${col};stroke-width:${sw};stroke-linejoin:round"/></g>`;
     if (sel) s += `<path d="${d}" style="fill:none;stroke:var(--accent);stroke-width:${sw + 2.2};opacity:.45;stroke-linejoin:round"/>`;
     s += `<path d="${d}" style="fill:none;stroke:rgba(0,0,0,.35);stroke-width:${sw + 0.6};stroke-linejoin:round"/><path d="${d}" style="fill:none;stroke:${col};stroke-width:${sw};stroke-linejoin:round"/>`;
     if (w.cond === 'PE' || w.cond === 'PEN') s += `<path d="${d}" style="fill:none;stroke:var(--w-pey);stroke-width:${sw * 0.55};stroke-dasharray:3 3;stroke-linejoin:round"/>`;
@@ -153,25 +164,25 @@
     [[pts[0], pts[1], w.a], [pts[pts.length - 1], pts[pts.length - 2], w.b]].forEach(([p, q, e]) => {
       if (!e.dev && !e.bus) return;
       const dy = Math.sign(q[1] - p[1]) || 1;
-      s += `<rect x="${p[0] - sw / 2 - 0.5}" y="${dy > 0 ? p[1] + 2.4 : p[1] - 7.4}" width="${sw + 1}" height="5" rx="0.6" style="fill:${fer};stroke:rgba(0,0,0,.4);stroke-width:0.3"/>`;
+      s += `<rect x="${f2(p[0] - sw / 2 - 0.5)}" y="${f2(dy > 0 ? p[1] + 2.4 : p[1] - 7.4)}" width="${sw + 1}" height="5" rx="0.6" style="fill:${fer};stroke:rgba(0,0,0,.4);stroke-width:0.3"/>`;
     });
-    if (o.interactive) {
+    if (o.interactive && !o.fast) {
       for (let k = 1; k < pts.length; k++) {
         const [x0, y0] = pts[k - 1], [x1, y1] = pts[k];
         const hz = Math.abs(y1 - y0) < 0.01;
-        s += `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" data-seg="${hz ? 'h' : 'v'}" data-wire="${esc(w.id)}" style="stroke:transparent;stroke-width:${sw + 4};cursor:${hz ? 'ns-resize' : 'ew-resize'}"/>`;
+        s += `<line x1="${f2(x0)}" y1="${f2(y0)}" x2="${f2(x1)}" y2="${f2(y1)}" data-seg="${hz ? 'h' : 'v'}" data-wire="${esc(w.id)}" style="stroke:transparent;stroke-width:${sw + 4};cursor:${hz ? 'ns-resize' : 'ew-resize'}"/>`;
       }
     }
     return `<g data-wire="${esc(w.id)}">${s}</g>`;
   }
 
-  function feed(P) {
+  function feed(P, o = {}) {
     const K = C();
     const cs = K.feedCores(P);
     const x0 = 6 + (cs.length - 1) * 2.25;
     let s = `<path d="M${x0} -40 L${x0} -20" style="stroke:#3c4240;stroke-width:${cs.length * 4.5 + 3};stroke-linecap:round"/>`;
-    cs.forEach((c) => { const p = K.feedPt(P, c); s += `<path d="M${x0} -20 L${p.x} ${p.y}" style="stroke:${K.COND_COL[c]};stroke-width:2.2"/><circle cx="${p.x}" cy="${p.y}" r="1.8" data-feed="${c}" style="fill:${K.COND_COL[c]};stroke:#1c1f1d;stroke-width:0.4;cursor:crosshair"/>`; });
-    s += t(x0 + cs.length * 3 + 8, -30, `Ввод ${P.feed.phases === 3 ? '3ф' : '1ф'}: ${cs.join(', ')}`, 4, { a: 'start', wt: 700 });
+    cs.forEach((c) => { const p = K.feedPt(P, c); s += `<path d="M${x0} -20 L${p.x} ${p.y}" style="stroke:${K.COND_COL[c]};stroke-width:2.2"/><circle cx="${p.x}" cy="${p.y}" r="1.8" data-feed="${c}" style="fill:${K.COND_COL[c]};stroke:#1c1f1d;stroke-width:0.4;cursor:crosshair"/>${o.interactive ? `<rect x="${p.x - 2.2}" y="${p.y - 4}" width="4.4" height="8" data-feed="${c}" style="fill:transparent;cursor:crosshair"><title>Ввод ${c}</title></rect>` : ''}`; });
+    s += t(x0 + cs.length * 3 + 8, -30, `Ввод ${P.feed.phases === 3 ? '3ф' : '1ф'}: ${cs.join(', ')}`, 4, { a: 'start', wt: 700, f: 'var(--fg, #2b2f2c)' });
     return s;
   }
 
@@ -180,8 +191,8 @@
     return P.lines.map((l) => {
       const cs = K.lineCores(P, l), gx = K.glandX(P, l), y = K.H(P);
       let s = `<path d="M${gx} ${y + 18} L${gx} ${y + 46}" style="stroke:#3c4240;stroke-width:${cs.length * 3.2 + 2};stroke-linecap:round"/>`;
-      cs.forEach((c) => { const p = K.linePt(P, l, c); s += `<circle cx="${p.x}" cy="${p.y}" r="1.5" data-line="${esc(l.id)}" data-core="${c}" style="fill:${K.COND_COL[c]};stroke:#1c1f1d;stroke-width:0.4;cursor:crosshair"/>`; });
-      s += `<text transform="translate(${gx + 2.4} ${y + 52}) rotate(90)" style="${F};font-size:3.6px;fill:#2b2f2c;font-weight:700">${esc(`${l.num}. ${l.name}`.slice(0, 30))}</text>`;
+      cs.forEach((c) => { const p = K.linePt(P, l, c); s += `<circle cx="${p.x}" cy="${p.y}" r="1.5" data-line="${esc(l.id)}" data-core="${c}" style="fill:${K.COND_COL[c]};stroke:#1c1f1d;stroke-width:0.4;cursor:crosshair"/>${o.interactive ? `<rect x="${p.x - 1.6}" y="${p.y - 4.5}" width="3.2" height="9" data-line="${esc(l.id)}" data-core="${c}" style="fill:transparent;cursor:crosshair"><title>Линия ${esc(String(l.num))} · ${c}</title></rect>` : ''}`; });
+      s += `<text transform="translate(${gx + 2.4} ${y + 52}) rotate(90)" style="${F};font-size:3.6px;fill:var(--fg, #2b2f2c);font-weight:700">${esc(`${l.num}. ${l.name}`.slice(0, 30))}</text>`;
       const sel = o.sel && o.sel.kind === 'line' && o.sel.id === l.id;
       if (sel) s += r(gx - 7, y + 10, 14, 44, 'none', 'var(--accent)', { rx: 2, w: 1 });
       return `<g data-lineg="${esc(l.id)}">${s}</g>`;
@@ -189,7 +200,7 @@
   }
 
   function terminalsHit(P, o) {
-    if (!o.interactive) return '';
+    if (!o.interactive || o.fast) return '';
     const K = C();
     let s = '';
     P.devs.forEach((d) => K.terms(d).forEach((tm) => {
@@ -200,18 +211,40 @@
     return s;
   }
 
+  /* слой поверх щита: место под аппарат, место под шину, рамка выделения, тянущийся провод */
+  function overlay(P, o) {
+    const K = C();
+    const Hd = K.H(P);
+    const body = [];
+    if (o.ghost) {
+      const gh = o.ghost, x = K.G.SD + gh.x * K.G.MOD, y = K.railY(gh.row) - 44;
+      body.push(r(x - 0.6, y, gh.w * K.G.MOD + 1.2, 88, gh.ok ? 'rgba(31,136,61,.14)' : 'rgba(209,36,47,.16)', gh.ok ? 'var(--success)' : 'var(--danger)', { rx: 2, w: 1 }));
+      if (gh.ok && gh.snap) body.push(`<line x1="${x}" y1="${y - 4}" x2="${x}" y2="${y + 92}" style="stroke:var(--success);stroke-width:0.8;stroke-dasharray:2 2"/>`);
+    }
+    if (o.busGhost) { const bg = o.busGhost; body.push(r(K.G.SD + bg.x - 1, (bg.zone === 'top' ? K.G.BUSZ / 2 : Hd - K.G.BUSZ / 2) - 6.5, bg.w + 2, 13, bg.ok ? 'rgba(31,136,61,.14)' : 'rgba(209,36,47,.16)', bg.ok ? 'var(--success)' : 'var(--danger)', { rx: 2, w: 0.8 })); }
+    if (o.band) { const b = o.band; body.push(`<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" style="fill:var(--accent);fill-opacity:.08;stroke:var(--accent);stroke-width:0.8;stroke-dasharray:3 2;pointer-events:none"/>`); }
+    if (o.preview) { const p = o.preview; body.push(`<line x1="${p.x1}" y1="${p.y1}" x2="${p.x2}" y2="${p.y2}" style="stroke:${p.ok === false ? 'var(--danger)' : p.ok ? 'var(--success)' : 'var(--accent)'};stroke-width:1.2;stroke-dasharray:3 2;pointer-events:none"/><circle cx="${p.x1}" cy="${p.y1}" r="3.2" style="fill:var(--accent);fill-opacity:.35;stroke:var(--accent);stroke-width:0.8;pointer-events:none"/>`); }
+    return body.join('');
+  }
+
   /* весь щит; o: { sel, interactive, tool, wireStart, ghost } */
   S.edDraw = function (P, o = {}) {
     const K = C();
+    K.sync(P);
     const Wd = K.W(P), Hd = K.H(P);
     const vb = [-14, -48, Wd + 28, Hd + 48 + (P.lines.length ? 128 : 30)];
-    const body = [enclosure(P), P.buses.map((b) => bus(P, b, o)).join(''), P.devs.map((d) => device(P, d, o)).join(''), P.combs.map((c) => comb(P, c)).join(''), feed(P), lines(P, o), P.wires.map((w, i) => wire(P, w, i, o)).join(''), terminalsHit(P, o)];
-    if (o.ghost) {
-      const gh = o.ghost, x = K.G.SD + gh.x * K.G.MOD, y = K.railY(gh.row) - 42.5;
-      body.push(r(x, y, gh.w * K.G.MOD, 85, gh.ok ? 'rgba(31,136,61,.18)' : 'rgba(209,36,47,.18)', gh.ok ? 'var(--success)' : 'var(--danger)', { rx: 1.6, w: 0.8 }));
+    const body = [enclosure(P), P.buses.map((b) => bus(P, b, o)).join(''), P.devs.map((d) => device(P, d, o)).join(''), P.combs.map((c) => comb(P, c)).join(''), feed(P, o), lines(P, o), P.wires.map((w, i) => wire(P, w, i, o)).join(''), terminalsHit(P, o)];
+    /* ручки на концах выделенного провода: потяни, чтобы перекинуть конец на другую клемму */
+    if (o.interactive && !o.fast && o.sel && o.sel.kind === 'wire') {
+      const i = P.wires.findIndex((w) => w.id === o.sel.id);
+      const pts = i >= 0 && K.route(P, P.wires[i], i);
+      if (pts) [['a', pts[0]], ['b', pts[pts.length - 1]]].forEach(([k, q]) => body.push(`<circle cx="${q[0]}" cy="${q[1]}" r="2.6" data-wend="${k}" data-wire="${esc(o.sel.id)}" style="fill:var(--bg, #fff);stroke:var(--accent);stroke-width:1;cursor:move"><title>Потяни конец провода на другую клемму</title></circle>`));
     }
+    body.push(`<g data-overlay>${overlay(P, o)}</g>`);
     return { vb, svg: body.join('') };
   };
   S.edDraw.pathD = pathD;
+  S.edDraw.overlay = overlay;
+  S.edDraw.wire = wire;
   S.edDraw.device = device;
 })();
