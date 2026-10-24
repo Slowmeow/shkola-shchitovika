@@ -87,6 +87,8 @@ const FD = S.field || {};
 (FD.rules || []).forEach((r) => { if (!r.norm || !r.q || !r.a || !r.why) bad(`правило ${r.id}: нет нормы, причины или карточки`); });
 (FD.measures || []).forEach((m) => { if (!m.q || !m.a || !m.ref) bad(`замер ${m.id}: нет карточки или основания`); });
 (FD.videos || []).forEach((v) => v.claims.forEach((c) => { if (!["ok", "part", "bad", "prac"].includes(c.v) || !c.text || !c.norm) bad(`разбор ${v.id} совет ${c.n}: неполный`); }));
+// тренажёры в уроках (data-widget) существуют
+lessons.forEach((l) => [...String(l.html).matchAll(/data-widget="(w+)"/g)].forEach((m) => { if (!(S.widgets && S.widgets[m[1]])) bad(`урок ${l.id}: нет тренажёра ${m[1]}`); }));
 // экзамены: варианты, верный ответ, пояснение и основание у каждого вопроса, без повторов
 (S.exams || []).forEach((x) => {
   if (!x.id || !x.title || !(x.pass > 0 && x.pass <= 1) || !(x.n > 0)) bad(`экзамен ${x.id}: неполное описание`);

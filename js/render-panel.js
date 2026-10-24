@@ -393,6 +393,13 @@
 
   /* ---------- таблицы и списки ---------- */
   S.renderGroupsTable = (R) => `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>№</th><th>Линия</th><th>Аппарат</th><th>Защита</th><th>Кабель</th><th class="r">P, кВт</th><th class="r">I, А</th><th>Фаза</th></tr></thead><tbody>${R.groupsTable.map((r) => `<tr><td class="num">${r.num}</td><td>${esc(r.name)}${r.notes && r.notes.length ? `<div class="small muted">${r.notes.map(esc).join('; ')}</div>` : ''}</td><td class="mono">${esc(r.dev)}</td><td class="mono">${esc(r.prot)}</td><td class="mono" style="white-space:nowrap">${esc(r.cable)}${r.len ? `, ${r.len} м` : ''}</td><td class="r num">${S.fmt(r.p, 2)}</td><td class="r num">${S.fmt(r.I, 1)}</td><td class="mono">${esc(r.phase)}</td></tr>`).join('')}</tbody></table></div>`;
+  // кабельный журнал по образцу формы 7 ГОСТ 21.613-2014 (упрощённо): длина по плану, в журнал — с надбавкой (п. 6.5.6)
+  S.renderCableJournal = (R) => {
+    const name = (R.cfg && R.cfg.name) || '';
+    const rows = R.groupsTable.filter((r) => r.cable);
+    if (!rows.length) return '';
+    return `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Обозначение</th><th>Начало</th><th>Конец</th><th>Марка, число и сечение жил</th><th class="r">Длина по плану, м</th></tr></thead><tbody>${rows.map((r) => `<tr><td class="mono">Гр. ${r.num}</td><td>Щит</td><td>${esc(r.name)}</td><td class="mono">${esc(r.cable)}</td><td class="r num">${r.len ? S.fmt(r.len, 1) : '—'}</td></tr>`).join('')}</tbody><caption>${name ? esc(name) + ". " : ""}Кабельный журнал по образцу формы 7 ГОСТ 21.613-2014. В журнал длину записывают с надбавкой на подъёмы к щиту, спуски к потребителю, изгибы и разделку (п. 6.5.6).</caption></table></div>`;
+  };
   S.renderBOM = (R) => `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Наименование</th><th class="r">Кол-во</th></tr></thead><tbody>${R.bom.map((b) => `<tr><td>${esc(b.name)}</td><td class="r num" style="white-space:nowrap">${S.fmt(b.qty, 1)} ${esc(b.unit)}</td></tr>`).join('')}</tbody><caption>Провода и наконечники — ориентировочно, с запасом 20 %. Аппараты одного производителя проще стыкуются гребёнками.</caption></table></div>`;
   S.renderChecks = (R) => `<div class="stack-sm">${R.checks.map((c) => `<div class="check-row ${c.level}">${S.icon(c.level === 'ok' ? 'check' : c.level === 'warn' ? 'alert' : 'x')}<div>${esc(c.text)}${c.ref ? `<span class="ref">${esc(c.ref)}</span>` : ''}</div></div>`).join('')}${(R.notes || []).map((n) => `<div class="check-row warn">${S.icon('info')}<div>${esc(n)}</div></div>`).join('')}</div>`;
   S.renderPhaseBars = (R) => {

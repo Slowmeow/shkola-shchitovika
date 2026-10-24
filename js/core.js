@@ -543,6 +543,7 @@
       const f = S.formulaById && S.formulaById[el.dataset.calc];
       if (f) S.mountCalc(el, f);
     });
+    S.$$('[data-widget]', root).forEach((el) => { if (el.dataset.done) return; el.dataset.done = '1'; const f = S.widgets && S.widgets[el.dataset.widget]; if (f) f(el); });
     S.$$('[data-zoom]', root).forEach((el) => { if (!el.dataset.done) { el.dataset.done = '1'; S.mountZoom(el); } });
   };
 

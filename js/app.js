@@ -124,7 +124,7 @@
       const mods = S.course.filter((m) => m.track === track.id);
       const tl = mods.reduce((a, m) => a.concat(m.lessons), []);
       return `<div class="wrap">
-        <div class="page-head"><h1 class="h1">Курс</h1><p class="muted">${S.program.length} направлений: щиты от физики до сложных схем, обозначения, ГОСТы, кондиционеры и гайды. Уроков сейчас: ${L.length}, курс пополняется по программе.</p>
+        <div class="page-head"><h1 class="h1">Курс</h1><p class="muted">${S.program.length} направлений: щиты от физики до сложных схем, обозначения, ГОСТы, кондиционеры, программы и автоматизация, гайды. Уроков сейчас: ${L.length}, курс пополняется по программе.</p>
           <div class="bar" style="margin-top:10px"><i style="width:${pct}%"></i></div><div class="row small muted" style="justify-content:space-between"><span>${done} из ${L.length} уроков</span><span class="mono">${pct}%</span></div>
           <div class="row" style="margin-top:8px"><a class="btn sm" href="#program" data-go="program">${S.icon('map')}Программа обучения и как учиться</a><a class="btn sm" href="${S.anki.url}" download target="_blank" rel="noopener">${S.icon('download')}Колода Anki</a></div></div>
         ${continueCTA()}
@@ -354,7 +354,7 @@
         body.innerHTML = `${S.zoomBox(sl, { min: w, h: '75vh' })}<p class="small muted" style="margin-top:8px">Однолинейная схема: сверху ввод, ниже группы с таблицей. Так рисуют схему на дверцу щита.</p>`;
         S.enhance(body);
       } else if (tab === 'groups') {
-        body.innerHTML = `<div class="stack">${S.renderPhaseBars(R1)}${S.renderGroupsTable(R1)}</div>`;
+        body.innerHTML = `<div class="stack">${S.renderPhaseBars(R1)}${S.renderGroupsTable(R1)}${S.renderCableJournal ? `<h3 class="h3">Кабельный журнал</h3>${S.renderCableJournal(R1)}` : ''}</div>`;
       } else if (tab === 'bom') {
         body.innerHTML = `<div class="stack">${S.renderBOM(R1)}<div class="row"><button class="btn sm" type="button" data-exp="txt">${S.icon('download')}Скачать всё текстом</button><button class="btn sm" type="button" data-exp="svg">${S.icon('download')}Скачать схему щита (SVG)</button><button class="btn sm" type="button" data-exp="copy">${S.icon('copy')}Скопировать</button></div></div>`;
       } else if (tab === 'checks') {

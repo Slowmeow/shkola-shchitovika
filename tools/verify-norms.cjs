@@ -55,26 +55,27 @@ JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', 'real-photos.json'), 'utf8')
 
 // 2. поиск ссылок
 const DOCRX = /(ПУЭ|ПОТЭЭ|СП\s*256(?:\.1325800(?:\.2016)?)?|ГОСТ\s*12\.1\.038(?:-82)?)|(МЭК|IEC|ГОСТ\s*Р?|ТР\s*ТС|СП\s*\d{1,3}(?:\.\d+)*|ПТЭЭП|Федеральн|приказ)/g;
-const docKey = (s) => (/ПУЭ/.test(s) ? 'ПУЭ' : /ПОТЭЭ/.test(s) ? 'ПОТЭЭ' : /СП\s*256/.test(s) ? 'СП256' : /12\.1\.038/.test(s) ? 'ГОСТ12.1.038' : null);
+const docKey = (s) => (/ПУЭ/.test(s) ? 'ПУЭ' : /ПОТЭЭ/.test(s) ? 'ПОТЭЭ' : /СП\s*256/.test(s) ? 'СП256' : /12\.1\.038/.test(s) ? 'ГОСТ12.1.038' : /21\.613/.test(s) ? 'ГОСТ21.613' : /21\.101/.test(s) ? 'ГОСТР21.101' : null);
 const cites = [];
 blocks.forEach(([where, text, def]) => {
-  // предложения: точка + пробел + заглавная буква
-  const sents = text.split(/(?<=[.!?»)])\s+(?=[А-ЯA-Z«(])/);
+  // предложения: точка + пробел + заглавная буква (кроме сокращений «табл. Г.1», «п. А.3», «рис. Б.2»)
+  const sents = text.split(/(?<=[.!?»)])(?<!(?:^|[\s(])(?:табл|пп?|рис|прил|см)\.)\s+(?=[А-ЯA-Z«(])/);
   let last = null, lastAge = 99; // документ из предыдущих предложений того же текста
   sents.forEach((sent) => {
     let cur = lastAge <= 6 ? last : def; // документ, к которому относятся номера пунктов
     let explicit = false;
     let tables = false; // «из таблиц ПУЭ 1.3.4–1.3.7» — дальше номера таблиц
     const group = [];
-    const tok = /(таблиц[а-яё]*\s+)?(ПУЭ|ПОТЭЭ|СП\s*256(?:\.1325800(?:\.2016)?)?|ГОСТ\s*12\.1\.038(?:-82)?)|(МЭК|IEC|ГОСТ\s*(?:Р\s*)?(?:IEC\s*)?[\d.]+|ТР\s*ТС|СП\s*(?!256)\d{1,3}(?:\.\d+)+|ПТЭЭП|BS\s*\d+)|(табл[а-яё]*\.?\s*)(\d+(?:\.\d+)+)|(пп?\.\s*)((?:[А-Я]?\.?\d+(?:\.\d+)+(?:\s*[–-]\s*\d+(?:\.\d+)+)?(?:\s*(?:,|и)\s*(?=\d|[А-Я]\.\d))?)+)|(?<![\d.])(\d\.\d{1,2}\.\d{1,3})(?:\s*[–-]\s*(\d\.\d{1,2}\.\d{1,3}))?(?![\d.]?\d)/g;
+    const tok = /(таблиц[а-яё]*\s+)?(ПУЭ|ПОТЭЭ|СП\s*256(?:\.1325800(?:\.2016)?)?|ГОСТ\s*12\.1\.038(?:-82)?|ГОСТ\s*21\.613(?:-2014)?|ГОСТ\s*Р\s*21\.101(?:-2020)?)|(МЭК|IEC|ГОСТ\s*(?:Р\s*)?(?:IEC\s*)?[\d.]+|ТР\s*ТС|СП\s*(?!256)\d{1,3}(?:\.\d+)+|ПТЭЭП|BS\s*\d+)|(табл[а-яё]*\.?\s*)(\d+(?:\.\d+)+)|(пп?\.\s*)((?:[А-Я]?\.?\d+(?:\.\d+)+(?:\s*[–-]\s*\d+(?:\.\d+)+)?(?:\s*(?:,|и)\s*(?=\d|[А-Я]\.\d))?)+)|(?<![\d.])(\d\.\d{1,2}\.\d{1,3})(?:\s*[–-]\s*(\d\.\d{1,2}\.\d{1,3}))?(?![\d.]?\d)/g;
     let m;
     while ((m = tok.exec(sent))) {
       if (m[2]) { cur = docKey(m[2]); tables = !!m[1]; last = cur; lastAge = 0; explicit = true; continue; }
       if (m[3]) { cur = 'other'; explicit = true; continue; }
       const push = (id, kind) => {
         const three = /^[1-7]\.\d{1,2}\.\d{1,3}$/.test(id.replace(/^табл\. /, ''));
-        // трёхуровневый номер без явного документа рядом — пункт ПУЭ
-        const doc = explicit && cur && cur !== 'other' ? cur : (three && cur !== 'other' && !explicit ? 'ПУЭ' : (cur === 'other' ? 'other' : cur));
+        // трёхуровневый номер без явного документа рядом — пункт ПУЭ; но если текст выше говорит о ГОСТе СПДС с таким пунктом — пункт этого ГОСТа
+        const gostCtx = ['ГОСТ21.613', 'ГОСТР21.101'].includes(cur) && IDX[cur] && IDX[cur][id];
+        const doc = explicit && cur && cur !== 'other' ? cur : (three && cur !== 'other' && !explicit && !gostCtx ? 'ПУЭ' : (cur === 'other' ? 'other' : cur));
         // короткая ссылка вида «(ПУЭ, п. 2.1.58)» — сравниваем с текстом всего блока
         const c = { where, sent, ctx: sent.replace(/[^а-яё]/gi, '').length < 60 ? text.slice(0, 700) : sent, doc, id: tables && !/^табл/.test(id) ? 'табл. ' + id : id, kind, group, explicit };
         group.push(c); cites.push(c);
@@ -84,7 +85,7 @@ blocks.forEach(([where, text, def]) => {
         m[7].split(/\s*(?:,|и)\s*/).filter(Boolean).forEach((part) => part.split(/\s*[–-]\s*/).forEach((x) => push(x.trim(), 'clause')));
         continue;
       }
-      if (m[8]) { if (cur === 'other') continue; push(m[8], 'bare'); if (m[9]) push(m[9], 'bare'); }
+      if (m[8]) { if (cur === 'other' || /адрес/i.test(sent)) continue; /* «адрес 1.2.15» — адрес KNX, не пункт */ push(m[8], 'bare'); if (m[9]) push(m[9], 'bare'); }
     }
     lastAge++;
   });
