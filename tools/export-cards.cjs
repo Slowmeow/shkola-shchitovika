@@ -45,9 +45,9 @@ const PIC_FIX = {
   'cables|colors': '', 'din|panelfront': '', 'mcb-curves|curves': 'Диапазоны мгновенного расцепления B, C, D', 'busbars|comb': 'Почему гребёнку лучше питать в середину?',
   'spd|spd': 'Суммарная длина проводов к УЗИП', 'boards|panelfront': '', 'rcd-select|leak': 'Правило одной трети', 'contactor|contactor': 'Выводы катушки контактора',
   'ip|ip': 'Что означает IP20?', 'rcd|rcd': 'Как УЗО обнаруживает утечку?', 'rn|rn':'Как выбрать номинал реле напряжения?', 'rn|zerobreak': 'Что происходит при обрыве нуля',
-  'schemes|ladder': '', 'switches|switch1': '', 'switches|passthrough': 'Сколько жил между двумя проходными', 'layout|panelfront': 'Как размещать УЗО и его автоматы?',
+  'schemes|ladder': 'Как в схеме управления получают «И» и «ИЛИ»?', 'switches|switch1': 'Какой провод разрывает однополюсный выключатель?', 'switches|passthrough': 'Сколько жил между двумя проходными', 'layout|panelfront': 'Как размещать УЗО и его автоматы?',
   'three-panel|comb': 'Как распределять однофазные группы?', 'vdrop|vdrop': 'Бойлер 16 А в 40 м от щита', 'meter|meter1': '', 'meter|meter3': '',
-  'sockets|socketwiring': '', 'rcd|nmix': '',
+  'sockets|socketwiring': 'Как присоединяют PE к розеткам?', 'rcd|nmix': '',
   'cables|cablemark': 'Что означает «Г» в марке ВВГ?', 'crimp|ferrule': 'Чем оконцевать гибкую жилу под винтовой зажим?', 'din|din': 'Ширина одного модуля', 'loop|loop': 'Наибольшее сопротивление петли для мгновенного', 'selectivity|selectivity': 'Почему при большом токе КЗ отключаются оба', 'leak|leak': 'Фоновый ток утечки при отсутствии данных'
 };
 
