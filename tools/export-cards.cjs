@@ -47,7 +47,7 @@ const PIC_FIX = {
   'schemes|ladder': '', 'switches|switch1': '', 'switches|passthrough': 'Сколько жил между двумя проходными', 'layout|panelfront': 'Как размещать УЗО и его автоматы?',
   'three-panel|comb': 'Как распределять однофазные группы?', 'vdrop|vdrop': 'Почему в формуле множитель 2?', 'meter|meter1': 'Однофазный счётчик', 'meter|meter3': '',
   'sockets|socketwiring': '', 'rcd|nmix': '',
-  'cables|cablemark': 'Что значит буква «А»', 'din|din': 'Сколько модулей занимает', 'loop|loop': 'Ток КЗ в конце линии 120 А', 'selectivity|selectivity': 'Какая пара хорошая для селективности', 'leak|leak': 'Почему УЗО может выбивать'
+  'cables|cablemark': 'Что означает «Г» в марке ВВГ?', 'crimp|ferrule': 'Чем оконцевать гибкую жилу под винтовой зажим?', 'din|din': 'Сколько модулей занимает', 'loop|loop': 'Ток КЗ в конце линии 120 А', 'selectivity|selectivity': 'Какая пара хорошая для селективности', 'leak|leak': 'Почему УЗО может выбивать'
 };
 
 const note = (key, kind, f, tags) => {
