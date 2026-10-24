@@ -42,12 +42,13 @@ const figLog = [];
 // рисунок урока → карточка, проверено вручную (по вопросу; '' — рисунок ни к одной карточке не подходит)
 const PIC_FIX = {
   'resistivity|vdrop': 'Падение напряжения в однофазной линии', 'series-parallel|switch1': '', 'three-troubles|kz': 'Что защищает от короткого замыкания?',
-  'cables|colors': '', 'din|panelfront': '', 'mcb-curves|curves': 'При каком токе автомат C16 отключит мгновенно', 'busbars|comb': '',
-  'spd|spd': 'Где ставят УЗИП относительно УЗО?', 'rn|rn': 'Как выбрать номинал реле напряжения?', 'rn|zerobreak': 'Что происходит при обрыве нуля',
+  'cables|colors': '', 'din|panelfront': '', 'mcb-curves|curves': 'Диапазоны мгновенного расцепления B, C, D', 'busbars|comb': 'Почему гребёнку лучше питать в середину?',
+  'spd|spd': 'Суммарная длина проводов к УЗИП', 'boards|panelfront': '', 'rcd-select|leak': 'Правило одной трети', 'contactor|contactor': 'Выводы катушки контактора',
+  'ip|ip': 'Что означает IP20?', 'rcd|rcd': 'Как УЗО обнаруживает утечку?', 'rn|rn':'Как выбрать номинал реле напряжения?', 'rn|zerobreak': 'Что происходит при обрыве нуля',
   'schemes|ladder': '', 'switches|switch1': '', 'switches|passthrough': 'Сколько жил между двумя проходными', 'layout|panelfront': 'Как размещать УЗО и его автоматы?',
-  'three-panel|comb': 'Как распределять однофазные группы?', 'vdrop|vdrop': 'Почему в формуле множитель 2?', 'meter|meter1': 'Однофазный счётчик', 'meter|meter3': '',
+  'three-panel|comb': 'Как распределять однофазные группы?', 'vdrop|vdrop': 'Почему в формуле множитель 2?', 'meter|meter1': '', 'meter|meter3': '',
   'sockets|socketwiring': '', 'rcd|nmix': '',
-  'cables|cablemark': 'Что означает «Г» в марке ВВГ?', 'crimp|ferrule': 'Чем оконцевать гибкую жилу под винтовой зажим?', 'din|din': 'Сколько модулей занимает', 'loop|loop': 'Ток КЗ в конце линии 120 А', 'selectivity|selectivity': 'Какая пара хорошая для селективности', 'leak|leak': 'Почему УЗО может выбивать'
+  'cables|cablemark': 'Что означает «Г» в марке ВВГ?', 'crimp|ferrule': 'Чем оконцевать гибкую жилу под винтовой зажим?', 'din|din': 'Ширина одного модуля', 'loop|loop': 'Ток КЗ в конце линии 120 А', 'selectivity|selectivity': 'Какая пара хорошая для селективности', 'leak|leak': 'Почему УЗО может выбивать'
 };
 
 const note = (key, kind, f, tags) => {
