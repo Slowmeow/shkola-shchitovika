@@ -509,7 +509,10 @@
     S.cleanup = [];
     S.closeSheet();
     S.current = r;
-    const root = S.$('#view');
+    /* каждому экрану — чистый контейнер: обработчики, которые прошлый экран повесил на #view, не ловят клики нового */
+    const old = S.$('#view');
+    const root = old.cloneNode(false);
+    old.replaceWith(root);
     let html = '';
     try { html = v.render(r.arg); } catch (e) { console.error(e); html = `<div class="wrap"><div class="empty">Не получилось открыть этот раздел. ${S.esc(e.message)}</div></div>`; }
     root.innerHTML = html;

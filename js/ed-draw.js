@@ -21,6 +21,19 @@
     return '';
   };
 
+  /* надписи у клемм: 1/2, 3/4… по полюсам (вход нечётный, выход чётный), N — у нейтрали УЗО и дифавтоматов, L и N у реле напряжения */
+  function termLabel(d, T, tm) {
+    if (['mcb', 'sw', 'rcd', 'rcbo'].includes(d.type)) {
+      const rc = d.type === 'rcd' || d.type === 'rcbo';
+      if (rc && /^N/.test(tm.t)) return 'N';
+      const ph = (tm.side === 'top' ? T.top : T.bot).filter((x) => !(rc && /^N/.test(x)));
+      const i = ph.indexOf(tm.t);
+      return i < 0 ? '' : String(tm.side === 'top' ? 2 * i + 1 : 2 * i + 2);
+    }
+    if (d.type === 'rn') return tm.t === 'N' ? 'N' : tm.t ? 'L' : '';
+    if (d.type === 'km' || d.type === 'spd') return tm.t;
+    return '';
+  }
   function screw(x, y) {
     return `<circle cx="${x}" cy="${y}" r="2.6" style="fill:#cfd4d1;stroke:#5f6662;stroke-width:0.45"/><line x1="${x - 1.7}" y1="${y - 1.1}" x2="${x + 1.7}" y2="${y + 1.1}" style="stroke:#5f6662;stroke-width:0.55"/>`;
   }
@@ -45,17 +58,34 @@
     if (d.type !== 'blank' && d.type !== 'dbus') out.push(r(g.x + 1.2, fy, g.w - 2.4, 45, '#fafbfa', '#b7bdb9', { rx: 1, w: 0.4 }));
     if (K.VIEW(P).stickers) { const rx = Math.min(g.w / 2 - 0.6, 2.2 + d.id.length * 1.15); out.push(`<ellipse cx="${cx}" cy="${fy - 3.3}" rx="${rx}" ry="2.7" style="fill:#ffe94d;stroke:#8a7a00;stroke-width:0.35"/>`, t(cx, fy - 2.1, d.id, 3.1, { wt: 700, f: '#1d1d1d' })); }
     else out.push(t(cx, fy - 2, d.id, 3.4, { wt: 700 }));
-    if (brand && d.type !== 'blank' && d.type !== 'dbus') out.push(t(cx, fy + 4.4, brand, g.w < 16 ? 2.3 : 2.6, { f: '#4a504c', wt: 700 }));
+    /* маркировка лицевой панели как на аппарате: изготовитель, серия, «C16», отключающая способность в амперах,
+       «I» и «O» у рукоятки, каталожный номер (ГОСТ IEC 60898-1, раздел 6) */
+    const fam = d.brand || s.brand;
+    const small = g.w < 16;
+    const brandTxt = fam === 'gen' || fam === 'my' ? '' : g.w < 30 ? ({ se: 'Schneider', sys: 'Systeme' }[fam] || brand) : brand;
+    const face = fam === 'gen' ? '' : K.faceOf(d), art = K.artOf(d);
+    const fit = (str, n) => (str.length > n ? str.slice(0, n - 1) + '…' : str);
+    if (brandTxt && d.type !== 'blank' && d.type !== 'dbus') out.push(t(cx, fy + 3.7, brandTxt, small ? 2.2 : 2.6, { f: '#30363a', wt: 700 }));
+    if (face && d.type !== 'blank' && d.type !== 'dbus') out.push(t(cx, fy + 6.6, fit(face, Math.floor(g.w / 1.25)), small ? 1.8 : 2.1, { f: '#4a504c' }));
     const dark = '#33383a';
     if (d.type === 'mcb' || d.type === 'sw' || d.type === 'rcbo' || d.type === 'rcd') {
       const tw = Math.min(g.w - 5, 6 + (d.poles - 1) * 15);
+      out.push(t(cx, cy - 10.2, 'I', 2.3, { wt: 700, f: '#30363a' }));
       out.push(r(cx - tw / 2, cy - 9, tw, 15, d.type === 'sw' ? '#7a2d22' : dark, '#1e2224', { rx: 1.6, w: 0.4 }));
       out.push(r(cx - tw / 2 + 1, cy - 8, tw - 2, 5, '#5b6164', null, { rx: 1 }));
-      out.push(t(cx, cy + 12.5, ratingText(d), g.w < 16 ? 3.6 : 4.4, { wt: 700 }));
-      if (d.type === 'rcd' || d.type === 'rcbo') {
-        out.push(`<circle cx="${g.x + g.w - 4.5}" cy="${fy + 9}" r="2.3" style="fill:#e3b341;stroke:#7a5d10;stroke-width:0.4"/>`, t(g.x + g.w - 4.5, fy + 10.1, 'T', 2.4, { wt: 700 }));
-        out.push(t(cx, cy + 17.8, `${d.ma || 30} мА ${d.rt || 'AC'}`, 2.7, { f: '#3d4340' }));
-      } else if (d.type === 'sw') out.push(t(cx, cy + 17.8, 'I — O', 2.6, { f: '#3d4340' }));
+      out.push(t(cx, cy + 9.2, 'O', 2.3, { wt: 700, f: '#30363a' }));
+      out.push(t(cx, cy + 14.3, ratingText(d), small ? 3.7 : 4.6, { wt: 700 }));
+      /* вторая строка: отключающая способность в рамке, класс токоограничения в квадрате, уставка и тип УЗО */
+      const items = [];
+      if ((d.type === 'mcb' || d.type === 'rcbo') && s.icu) items.push(['box', String(Math.round(s.icu * 1000))]);
+      if (d.type === 'mcb' && s.elc) items.push(['box', String(s.elc)]);
+      if (d.type === 'rcd' || d.type === 'rcbo') { items.push(['txt', `${d.ma || 30} мА`]); items.push(['box', d.rt || 'AC']); }
+      const fs = small ? 1.8 : 2.1, cw = fs * 0.62;
+      const wOf = ([k, v]) => v.length * cw + (k === 'box' ? 1.4 : 0);
+      let x0 = cx - (items.reduce((a, it) => a + wOf(it), 0) + Math.max(0, items.length - 1) * 0.9) / 2;
+      items.forEach((it) => { const w0 = wOf(it); if (it[0] === 'box') out.push(r(x0, cy + 16.3, w0, fs + 1.2, 'none', '#30363a', { w: 0.25 })); out.push(t(x0 + w0 / 2, cy + 16.3 + fs + 0.05, it[1], fs, { f: '#30363a', wt: 700 })); x0 += w0 + 0.9; });
+      if (art) out.push(t(cx, cy + 21.6, fit(art, Math.floor(g.w / 0.95)), small ? 1.45 : 1.7, { f: '#4a504c' }));
+      if (d.type === 'rcd' || d.type === 'rcbo') out.push(`<circle cx="${g.x + g.w - 4.2}" cy="${cy - 12.6}" r="2.2" style="fill:#e3b341;stroke:#7a5d10;stroke-width:0.4"/>`, t(g.x + g.w - 4.2, cy - 11.6, 'T', 2.3, { wt: 700 }));
     } else if (d.type === 'rn') {
       out.push(r(g.x + 3, cy - 10, g.w - 6, 10, '#17201b', null, { rx: 1 }), t(cx, cy - 2.4, '230', 6.2, { f: '#7CFC9A', wt: 700 }));
       out.push(`<circle cx="${cx - 5}" cy="${cy + 5}" r="1.8" style="fill:#c9ced0"/><circle cx="${cx + 5}" cy="${cy + 5}" r="1.8" style="fill:#c9ced0"/>`, t(cx, cy + 14, ratingText(d), 3.4, { wt: 700 }));
@@ -78,14 +108,10 @@
     } else if (d.type === 'blank') {
       out.push(`<path d="M${g.x + 2} ${cy - 15} l${g.w - 4} 30" style="stroke:#b9bfbb;stroke-width:0.5"/>`);
     }
-    if (d.label && g.w >= 15) {
-      const words = String(d.label).split(/\s+/); const lines = []; let cur = '';
-      const max = Math.max(6, Math.floor(g.w / 1.55));
-      words.forEach((w) => { if ((cur + ' ' + w).trim().length > max) { if (cur) lines.push(cur.trim()); cur = w; } else cur += ' ' + w; });
-      if (cur.trim()) lines.push(cur.trim());
-      lines.slice(0, 2).forEach((ln, i) => out.push(t(cx, fy + 40 + i * 3, ln.length > max ? ln.slice(0, max - 1) + '…' : ln, 2.3, { f: '#4a504c' })));
-    } else if (d.label) out.push(`<title>${esc(d.label)}</title>`);
-    K.terms(d).forEach((tm) => out.push(screw(tm.x, tm.y)));
+    /* назначение — полоской под лицевой панелью, как наклейка на щите */
+    if (d.label) { out.push(r(g.x + 1.2, cy + 23.4, g.w - 2.4, 4.6, '#fffbe6', '#c9b46a', { rx: 0.6, w: 0.25 }), t(cx, cy + 26.6, fit(String(d.label), Math.max(4, Math.floor(g.w / 1.25))), 2.2, { f: '#3d4340' }), `<title>${esc(d.label)}</title>`); }
+    const TN = K.termNames(d);
+    K.terms(d).forEach((tm) => { out.push(screw(tm.x, tm.y)); const L = termLabel(d, TN, tm); if (L) out.push(t(tm.x + 3.9, tm.y + 1, L, 2.2, { a: 'start', f: '#4a504c', wt: 700 })); });
     if (sel) out.push(r(g.x - 1.2, g.y - 1.2, g.w + 2.4, g.h + 2.4, 'none', 'var(--accent)', { rx: 2.4, w: 1.1 }));
     return `<g data-dev="${esc(d.id)}" style="cursor:${o.interactive ? 'grab' : 'default'}">${out.join('')}</g>`;
   }
@@ -270,10 +296,25 @@
     let s = '';
     P.devs.forEach((d) => K.terms(d).forEach((tm) => {
       const on = o.wireStart && o.wireStart.dev === d.id && o.wireStart.term === tm.t;
-      s += `<circle cx="${tm.x}" cy="${tm.y}" r="3.4" data-tdev="${esc(d.id)}" data-term="${esc(tm.t)}" style="fill:${on ? 'var(--accent)' : 'transparent'};fill-opacity:.5;stroke:${o.tool === 'wire' ? 'var(--accent)' : 'transparent'};stroke-width:0.5;cursor:crosshair"><title>${esc(d.id)} · ${esc(tm.t)}</title></circle>`;
+      s += `<circle cx="${tm.x}" cy="${tm.y}" r="3.4" data-tdev="${esc(d.id)}" data-tpin="${esc(tm.t)}" style="fill:${on ? 'var(--accent)' : 'transparent'};fill-opacity:.5;stroke:${o.tool === 'wire' ? 'var(--accent)' : 'transparent'};stroke-width:0.5;cursor:crosshair"><title>${esc(d.id)} · ${esc(tm.t)}</title></circle>`;
     }));
     P.buses.forEach((b) => { for (let k = 0; k < b.n; k++) { const p = K.busSlot(P, b, k); s += `<circle cx="${p.x}" cy="${p.y}" r="3.2" data-tbus="${esc(b.id)}" data-slot="${k}" style="fill:transparent;stroke:${o.tool === 'wire' ? 'var(--accent)' : 'transparent'};stroke-width:0.5;cursor:crosshair"/>`; } });
     return s;
+  }
+
+  /* выноски: рамка с текстом и линия к точке на щите */
+  const wrapText = (str, n) => { const out = []; String(str).split(/\n/).forEach((para) => { let cur = ''; para.split(/\s+/).forEach((w) => { if ((cur + ' ' + w).trim().length > n && cur) { out.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }); out.push(cur); }); return out; };
+  function notes(P, o) {
+    return (P.notes || []).map((n) => {
+      const lines = wrapText(n.text || '', 30).slice(0, 6);
+      const w = Math.max(22, Math.max(...lines.map((l) => l.length)) * 1.78 + 4), h = lines.length * 4.4 + 3.4;
+      const sel = o.sel && o.sel.kind === 'note' && o.sel.id === n.id;
+      const bx = Math.max(n.x, Math.min(n.ax, n.x + w)), by = Math.max(n.y, Math.min(n.ay, n.y + h));
+      let s2 = `<line x1="${f2(bx)}" y1="${f2(by)}" x2="${f2(n.ax)}" y2="${f2(n.ay)}" style="stroke:#c0392b;stroke-width:0.5"/><circle cx="${f2(n.ax)}" cy="${f2(n.ay)}" r="1.3" style="fill:#c0392b"/>`;
+      if (o.interactive) s2 += `<circle cx="${f2(n.ax)}" cy="${f2(n.ay)}" r="3.2" data-nanchor="${esc(n.id)}" style="fill:transparent;cursor:move"><title>Потяни, чтобы показать на другое место</title></circle>`;
+      s2 += `<g data-note="${esc(n.id)}" style="cursor:${o.interactive ? 'move' : 'default'}"><rect x="${f2(n.x)}" y="${f2(n.y)}" width="${f2(w)}" height="${f2(h)}" rx="1" style="fill:#fff8c4;stroke:${sel ? 'var(--accent)' : '#b08d00'};stroke-width:${sel ? 0.9 : 0.4}"/>${lines.map((l, i) => `<text x="${f2(n.x + 2)}" y="${f2(n.y + 4.6 + i * 4.4)}" style="${F};font-size:3.3px;fill:#2b2f2c">${esc(l)}</text>`).join('')}</g>`;
+      return s2;
+    }).join('');
   }
 
   /* слой поверх щита: место под аппарат, место под шину, рамка выделения, тянущийся провод */
@@ -287,6 +328,10 @@
       if (gh.ok && gh.snap) body.push(`<line x1="${x}" y1="${y - 4}" x2="${x}" y2="${y + 92}" style="stroke:var(--success);stroke-width:0.8;stroke-dasharray:2 2"/>`);
     }
     if (o.busGhost) { const bg = o.busGhost; body.push(r(K.G.SD + bg.x - 1, (bg.zone === 'top' ? K.G.BUSZ / 2 : Hd - K.G.BUSZ / 2) - 6.5, bg.w + 2, 13, bg.ok ? 'rgba(31,136,61,.14)' : 'rgba(209,36,47,.16)', bg.ok ? 'var(--success)' : 'var(--danger)', { rx: 2, w: 0.8 })); }
+    if (o.ruler) {
+      const q = o.ruler, L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), mx = (q.x1 + q.x2) / 2, my = (q.y1 + q.y2) / 2, lab = `${S.fmt(L, 1)} мм`;
+      body.push(`<line x1="${f2(q.x1)}" y1="${f2(q.y1)}" x2="${f2(q.x2)}" y2="${f2(q.y2)}" style="stroke:#c0392b;stroke-width:0.7;pointer-events:none"/><circle cx="${f2(q.x1)}" cy="${f2(q.y1)}" r="1.2" style="fill:#c0392b"/><circle cx="${f2(q.x2)}" cy="${f2(q.y2)}" r="1.2" style="fill:#c0392b"/><rect x="${f2(mx - lab.length * 1.05 - 1.5)}" y="${f2(my - 7.5)}" width="${f2(lab.length * 2.1 + 3)}" height="6" rx="1" style="fill:#fff;stroke:#c0392b;stroke-width:0.4;pointer-events:none"/><text x="${f2(mx)}" y="${f2(my - 3.2)}" text-anchor="middle" style="${F};font-size:3.6px;font-weight:700;fill:#c0392b;pointer-events:none">${esc(lab)}</text>`);
+    }
     if (o.band) { const b = o.band; body.push(`<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" style="fill:var(--accent);fill-opacity:.08;stroke:var(--accent);stroke-width:0.8;stroke-dasharray:3 2;pointer-events:none"/>`); }
     if (o.preview) { const p = o.preview; body.push(`<line x1="${p.x1}" y1="${p.y1}" x2="${p.x2}" y2="${p.y2}" style="stroke:${p.ok === false ? 'var(--danger)' : p.ok ? 'var(--success)' : 'var(--accent)'};stroke-width:1.2;stroke-dasharray:3 2;pointer-events:none"/><circle cx="${p.x1}" cy="${p.y1}" r="3.2" style="fill:var(--accent);fill-opacity:.35;stroke:var(--accent);stroke-width:0.8;pointer-events:none"/>`); }
     return body.join('');
@@ -307,6 +352,7 @@
       if (pts) [['a', pts[0]], ['b', pts[pts.length - 1]]].forEach(([k, q]) => body.push(`<circle cx="${q[0]}" cy="${q[1]}" r="2.6" data-wend="${k}" data-wire="${esc(o.sel.id)}" style="fill:var(--bg, #fff);stroke:var(--accent);stroke-width:1;cursor:move"><title>Потяни конец провода на другую клемму</title></circle>`));
     }
     if (dm) body.push(dims(P));
+    body.push(notes(P, o));
     body.push(`<g data-overlay>${overlay(P, o)}</g>`);
     return { vb, svg: body.join('') };
   };

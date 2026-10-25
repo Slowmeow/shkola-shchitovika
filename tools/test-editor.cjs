@@ -308,6 +308,41 @@ const wire = (a, b) => { E.wireStart = null; A.wireClick(a); A.wireClick(b); };
   E.sel = { kind: 'wire', id: E.P.wires[0].id };
   ok(/Вставить/.test(A.ctxHTML('empty')) && /Петлёй/.test(A.ctxHTML('wire')) && /Вывести линию/.test((A.setSel(['QF1']), A.ctxHTML('dev'))), 'контекстное меню собирается');
 }
+/* 9в. маркировка аппаратов, артикулы, перечень элементов, выноски, листы, лента */
+{
+  const art = (sid, o) => K.artOf(L.make(sid, o));
+  ok(art('iek-va4729', { In: 16 }) === 'MVA20-1-016-C', 'артикул IEK ВА47-29', art('iek-va4729', { In: 16 }));
+  ok(art('ekf-av6', { poles: 2, In: 16, curve: 'B' }) === 'mcb6-2-16B-av', 'артикул EKF AV-6');
+  ok(art('ekf-va4763', { In: 16 }) === 'mcb4763-1-16C-pro', 'артикул EKF ВА 47-63');
+  ok(art('abb-s200', { In: 16 }) === '2CDS251001R0164' && art('abb-s200', { In: 16, curve: 'B' }) === '', 'артикул ABB S201 C16, для B — пусто');
+  ok(art('se-ez9f', { In: 16 }) === 'EZ9F34116' && art('sys-c9f', { In: 16, curve: 'B' }) === 'C9F14116' && art('sys-c9f', { poles: 2, In: 63 }) === 'C9F34263', 'артикулы Easy9 и City9');
+  ok(art('ekf-av6', { In: 6 }) === '', 'для номиналов меньше 10 А артикул не выдумывается');
+  ok(L.byId('ekf-va4763').icu === 4.5, 'ВА 47-63 PROxima — 4,5 кА по каталогу EKF');
+  const P = fresh(2, 12);
+  for (let i = 0; i < 5; i++) A.addDevice('sys-c9f');
+  A.addDevice('ekf-vd100n');
+  const R = K.elements(E.P);
+  ok(R.some((r) => r.pos === 'QF1–QF5' && r.qty === 5 && r.note === 'C9F34116'), 'перечень: QF1–QF5 одной строкой с артикулом', R);
+  E.sel = { kind: 'dev', id: 'QF3' }; A.setProp('df', 'noBom', true);
+  ok(K.elements(E.P).some((r) => r.pos === 'QF1, QF2, QF4, QF5' && r.qty === 4) && K.bom(E.P).find((b) => /City9/.test(b.name)).qty === 4, 'аппарат «не включать» выпадает из перечня и спецификации', K.elements(E.P));
+  E.sel = { kind: 'dev', id: 'QF1' }; A.setProp('df', 'name', 'Автомат вводной особый');
+  ok(K.bom(E.P).some((b) => b.name === 'Автомат вводной особый'), 'своё наименование в спецификации');
+  wire({ feed: 'L' }, { dev: 'QF1', term: 'L' });
+  A.setProp('pf', 'wnStart', 11); A.commit(() => { K.numberWires(E.P, true); return ''; });
+  ok(K.bom(E.P).some((b) => b.name === 'Маркер провода «1»' && b.qty === 4), 'маркеры по цифрам: номер 11 — четыре «1»', K.bom(E.P).filter((b) => /Маркер/.test(b.name)));
+  A.commit(() => { E.P.notes = [{ id: 'n1', ax: 60, ay: 120, x: 80, y: 90, text: 'Затянуть 2 Н·м' }]; return ''; });
+  const svg = S.edDraw(E.P, { interactive: true }).svg;
+  ok(/data-note="n1"/.test(svg) && /Затянуть/.test(svg) && !/NaN/.test(svg), 'выноска рисуется');
+  E.sel = { kind: 'note', id: 'n1' }; A.delSel();
+  ok(!E.P.notes.length, 'выноска удаляется');
+  ['pe', 'tags', 'labels', 'bom', 'journal'].forEach((k) => ok(!/NaN|undefined/.test(E.sheetSVG(k, 'A3', 0)), 'лист печати ' + k));
+  ['home', 'insert', 'wires', 'view', 'reports'].forEach((t) => { E.rtab = t; ok(A.ribbonHTML().length > 300, 'лента: вкладка ' + t); });
+  E.rtab = 'home';
+  E.P.view.sheet = { bom: true, pe: true, journal: true, groups: true, checks: true };
+  const X = A.sheetExtras(E.P, 300, 0);
+  ok(X && X.w > 100 && X.h > 50 && !/NaN|undefined/.test(X.svg), 'таблицы рядом со щитом', X && [X.w, X.h]);
+  ok(!clean(E.P).length, 'модель цела', clean(E.P));
+}
 /* 10. импорт всех разборов и автолиния не портят модель */
 Object.keys(S.guideCfgs || {}).forEach((id) => {
   const P = K.fromBuilder(S.engine.build(S.guideCfgs[id](S.engine.newLine)), 'iek');

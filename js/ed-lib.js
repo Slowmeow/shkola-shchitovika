@@ -15,6 +15,7 @@
     iek: { name: 'IEK' },
     abb: { name: 'ABB' },
     se: { name: 'Schneider Electric' },
+    sys: { name: 'Systeme Electric' },
     gen: { name: 'Общие' },
     my: { name: 'Мои' }
   };
@@ -24,15 +25,35 @@
     km: 'Контакторы', meter: 'Счётчики', dbus: 'Шины N и PE на DIN-рейку', xt: 'Кросс-модули', blank: 'Заглушки', stop: 'Ограничители на DIN-рейку'
   };
 
+  /* артикулы по шаблонам каталогов производителей (проверены на примерах: MVA20-1-016-C, mcb6-2-16B-av, mcb4763-1-16C-pro,
+     2CDS251001R0164, EZ9F34116, C9F34116 и C9F14116); только целые номиналы от 10 А (у IEK — от 1 А), сверять перед заказом */
+  const pad = (n, k) => String(n).padStart(k, '0');
+  const okIn = (d, min) => Number.isInteger(d.In) && d.In >= (min || 10) && d.In <= 63;
+  const ART = {
+    'ekf-av6': (d) => (okIn(d) && d.curve ? `mcb6-${d.poles}-${d.In}${d.curve}-av` : ''),
+    'ekf-va4763': (d) => (okIn(d) && d.curve ? `mcb4763-${d.poles}-${d.In}${d.curve}-pro` : ''),
+    'iek-va4729': (d) => (okIn(d, 1) && d.curve ? `MVA20-${d.poles}-${pad(d.In, 3)}-${d.curve}` : ''),
+    'abb-s200': (d) => (okIn(d) && d.curve === 'C' ? `2CDS25${d.poles}001R${pad(d.In, 3)}4` : ''),
+    'se-ez9f': (d) => (okIn(d) && (d.curve === 'B' || d.curve === 'C') ? `EZ9F${d.curve === 'B' ? 1 : 3}4${d.poles}${pad(d.In, 2)}` : ''),
+    'sys-c9f': (d) => (okIn(d) && (d.curve === 'B' || d.curve === 'C') ? `C9F${d.curve === 'B' ? 1 : 3}4${d.poles}${pad(d.In, 2)}` : '')
+  };
+  /* надпись серии на лицевой панели */
+  const FACE = {
+    'ekf-av6': 'AV-6', 'ekf-av10': 'AV-10', 'ekf-va4763': 'ВА 47-63', 'ekf-avdt63n': 'АВДТ-63N', 'ekf-dva6': 'DVA-6', 'ekf-vd100n': 'ВД-100N', 'ekf-vn63n': 'ВН-63N', 'ekf-opvc': 'ОПВ-C', 'ekf-rvb': 'RVb', 'ekf-km': 'КМ',
+    'iek-va4729': 'ВА47-29', 'iek-m06n': 'M06N', 'iek-avdt32': 'АВДТ32', 'iek-avdt34': 'АВДТ34', 'iek-vd163': 'ВД1-63', 'iek-vn32': 'ВН-32', 'iek-ops1': 'ОПС1', 'iek-rnd': 'РН-Д', 'iek-km': 'КМ',
+    'abb-s200': (d) => 'S20' + d.poles, 'abb-sh200': (d) => 'SH20' + d.poles, 'abb-basicm': 'Basic M', 'abb-ds200': 'DS200', 'abb-f200': (d) => 'F20' + d.poles, 'abb-sd200': (d) => 'SD20' + d.poles, 'abb-ovr': 'OVR',
+    'se-ez9f': 'Easy9', 'se-ez9r': 'Easy9', 'se-ez9s': 'Easy9', 'sys-c9f': 'City9 Set'
+  };
+
   /* w — ширина в модулях: число (на весь аппарат) или функция от числа полюсов */
   const perPole = (p) => p;
   const L = [
     // EKF
     { id: 'ekf-av6', brand: 'ekf', series: 'AV-6 AVERES', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(1, 63), curves: ['B', 'C', 'D'], icu: 6, cable: '1–25 мм² (жёсткий), 1–16 мм² (гибкий)' },
     { id: 'ekf-av10', brand: 'ekf', series: 'AV-10 AVERES', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(1, 63), curves: ['B', 'C', 'D'], icu: 10 },
-    { id: 'ekf-va4763', brand: 'ekf', series: 'ВА 47-63 PROxima', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(0.5, 63), curves: ['B', 'C', 'D'], icu: 6, torque: 'не более 2,5 Н·м' },
+    { id: 'ekf-va4763', brand: 'ekf', series: 'ВА 47-63 PROxima', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(0.5, 63), curves: ['B', 'C', 'D'], icu: 4.5, torque: 'не более 2,5 Н·м' },
     { id: 'ekf-avdt63n', brand: 'ekf', series: 'АВДТ-63N', kind: 'rcbo', poles: [2, 4], w: perPole, In: range(6, 63), curves: ['B', 'C'], ma: [10, 30, 100, 300], rt: ['AC', 'A'] },
-    { id: 'ekf-dva6', brand: 'ekf', series: 'DVA-6 AVERES', kind: 'rcbo', poles: [2], w: 2, In: range(6, 40), curves: ['B', 'C', 'D'], ma: [10, 30, 100, 300], rt: ['AC', 'A'] },
+    { id: 'ekf-dva6', brand: 'ekf', series: 'DVA-6 AVERES', kind: 'rcbo', poles: [2], w: 2, In: range(6, 40), curves: ['B', 'C', 'D'], ma: [10, 30, 100, 300], rt: ['AC', 'A'], icu: 6 },
     { id: 'ekf-vd100n', brand: 'ekf', series: 'ВД-100N', kind: 'rcd', poles: [2, 4], w: perPole, In: range(16, 100), ma: [10, 30, 100, 300], rt: ['AC', 'A'] },
     { id: 'ekf-vn63n', brand: 'ekf', series: 'ВН-63N', kind: 'sw', poles: [1, 2, 3, 4], w: perPole, In: range(16, 63) },
     { id: 'ekf-opvc', brand: 'ekf', series: 'ОПВ-C', kind: 'spd', poles: [1, 2, 3, 4], w: perPole, cls: 'T2' },
@@ -61,6 +82,8 @@
     { id: 'se-ez9f', brand: 'se', series: 'Easy9 EZ9F', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(6, 63), curves: ['B', 'C'], icu: 4.5 },
     { id: 'se-ez9r', brand: 'se', series: 'Easy9 EZ9R', kind: 'rcd', poles: [2, 4], w: perPole, In: range(25, 63), ma: [30, 100, 300], rt: ['AC', 'A'], cable: '1–25 мм² (гибкий), 1–35 мм² (жёсткий)' },
     { id: 'se-ez9s', brand: 'se', series: 'Easy9 EZ9S', kind: 'sw', poles: [1, 2, 3, 4], w: perPole, In: range(40, 100) },
+    // Systeme Electric (бывший Schneider Electric в России)
+    { id: 'sys-c9f', brand: 'sys', series: 'City9 Set', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: [6, 10, 16, 20, 25, 32, 40, 50, 63], curves: ['B', 'C'], icu: 4.5, elc: 3 },
     // общие
     { id: 'gen-meter1', brand: 'gen', series: 'Счётчик 1ф на DIN', kind: 'meter', poles: [1], w: 4, wOpts: [4, 5, 6, 7], note: 'ширину и клеммы — по паспорту счётчика' },
     { id: 'gen-meter3', brand: 'gen', series: 'Счётчик 3ф на DIN', kind: 'meter', poles: [3], w: 7, wOpts: [6, 7, 8, 9] },
@@ -74,6 +97,7 @@
   const loadMine = () => { try { return JSON.parse(localStorage.getItem(lsKey) || '[]'); } catch (e) { return []; } };
   const saveMine = (arr) => { try { localStorage.setItem(lsKey, JSON.stringify(arr)); } catch (e) { S.toast && S.toast('Не удалось сохранить: память браузера заполнена'); } };
 
+  L.forEach((s) => { if (ART[s.id]) s.art = ART[s.id]; if (FACE[s.id]) s.face = FACE[s.id]; });
   const all = () => L.concat(loadMine().map((m) => Object.assign({ brand: 'my', poles: [m.poles || 1] }, m)));
   const byId = (id) => all().find((s) => s.id === id);
   const widthOf = (s, poles) => (typeof s.w === 'function' ? s.w(poles) : s.w);

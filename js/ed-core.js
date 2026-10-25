@@ -51,6 +51,9 @@
   const pitchOf = (P, k) => (P.pitches && P.pitches[k]) || P.pitch || 134;
   const lib = () => S.edLib;
   const spec = (d) => (lib() && lib().byId(d.sid)) || null;
+  /* артикул: свой у аппарата, иначе по шаблону каталога серии */
+  const artOf = (d) => { if (d.art) return d.art; const s = spec(d); if (!s || !s.art) return ''; return typeof s.art === 'function' ? s.art(d) : String(s.art); };
+  const faceOf = (d) => { const s = spec(d); if (!s) return ''; const f = s.face || s.series || ''; return typeof f === 'function' ? f(d) : f; };
   const devH = (d) => (spec(d) && spec(d).h) || 85;
   const devGeo = (d) => { const h = devH(d); return { x: G.SD + d.x * G.MOD + 0.25, y: railY(d.row) - h / 2, w: d.w * G.MOD - 0.5, h }; };
 
@@ -629,6 +632,7 @@
     ekf: { mcb: 'ekf-av6', rcd: 'ekf-vd100n', rcbo2: 'ekf-dva6', rcbo4: 'ekf-avdt63n', sw: 'ekf-vn63n', spd: 'ekf-opvc', rn: 'ekf-rvb', xt: 'ekf-cm' },
     iek: { mcb: 'iek-va4729', rcd: 'iek-vd163', rcbo2: 'iek-avdt32', rcbo4: 'iek-avdt34', sw: 'iek-vn32', spd: 'iek-ops1', rn: 'iek-rnd', xt: 'ekf-cm' },
     abb: { mcb: 'abb-s200', rcd: 'abb-f200', rcbo2: 'abb-ds200', rcbo4: 'ekf-avdt63n', sw: 'abb-sd200', spd: 'abb-ovr', rn: 'ekf-rvb', xt: 'ekf-cm' },
+    sys: { mcb: 'sys-c9f', rcd: 'se-ez9r', rcbo2: 'iek-avdt32', rcbo4: 'ekf-avdt63n', sw: 'se-ez9s', spd: 'ekf-opvc', rn: 'ekf-rvb', xt: 'ekf-cm' },
     se: { mcb: 'se-ez9f', rcd: 'se-ez9r', rcbo2: 'iek-avdt32', rcbo4: 'ekf-avdt63n', sw: 'se-ez9s', spd: 'ekf-opvc', rn: 'ekf-rvb', xt: 'ekf-cm' }
   };
   function fromBuilder(R, brand = 'ekf') {
@@ -671,17 +675,42 @@
     return P;
   }
 
+  /* наименование аппарата для спецификации и перечня элементов */
+  function devName(d) {
+    if (d.name) return d.name;
+    const s = spec(d) || {};
+    const br = (lib().BRANDS[s.brand] || {}).name || '';
+    if (d.type === 'dbus') return `Шина ${d.cond || 'N'} на DIN-рейку ${S.fmt(d.w, 1)} мод.`;
+    if (d.type === 'stop') return 'Ограничитель на DIN-рейку';
+    return [br === 'Общие' || br === 'Мои' ? '' : br, s.series || d.type, d.poles ? d.poles + 'P' : '', d.curve ? d.curve + (d.In || '') : d.In ? d.In + ' А' : '', d.ma ? d.ma + ' мА' : '', d.rt ? 'тип ' + d.rt : '', s.icu && (d.type === 'mcb' || d.type === 'rcbo') ? S.fmt(s.icu, 1) + ' кА' : ''].filter(Boolean).join(' ');
+  }
+  /* перечень элементов: одинаковые аппараты — одной строкой, обозначения подряд сжимаются: QF1–QF3 */
+  function elements(P) {
+    const rows = {};
+    P.devs.filter((d) => !d.noBom && !['stop', 'blank'].includes(d.type)).forEach((d) => {
+      const name = devName(d), art = artOf(d), k = name + '|' + art;
+      (rows[k] = rows[k] || { name, art, ids: [] }).ids.push(d.id);
+    });
+    const split = (id) => { const m = /^(.*?)(\d+)$/.exec(id); return m ? [m[1], Number(m[2])] : [id, NaN]; };
+    const pack = (ids) => {
+      const sorted = ids.slice().sort((a, b) => { const [pa, na] = split(a), [pb, nb] = split(b); return pa.localeCompare(pb) || na - nb; });
+      const out = [];
+      sorted.forEach((id) => { const [p, n] = split(id); const last = out[out.length - 1]; if (last && last.p === p && !isNaN(n) && n === last.to + 1) last.to = n; else out.push({ p, from: n, to: n, id }); });
+      return out.map((r) => (isNaN(r.from) ? r.id : r.to > r.from + 1 ? `${r.p}${r.from}–${r.p}${r.to}` : r.to === r.from + 1 ? `${r.p}${r.from}, ${r.p}${r.to}` : `${r.p}${r.from}`)).join(', ');
+    };
+    return Object.values(rows).map((r) => ({ pos: pack(r.ids), name: r.name, qty: r.ids.length, note: r.art, first: r.ids.slice().sort()[0] }))
+      .sort((a, b) => a.first.localeCompare(b.first, 'ru', { numeric: true }));
+  }
+
   /* ---------- спецификация: наименование, артикул, количество ---------- */
   function bom(P) {
     sync(P);
     const rows = {};
     const add = (k, name, n, unit, art) => { rows[k] = rows[k] || { name, qty: 0, unit: unit || 'шт', art: art || '' }; rows[k].qty += n; };
     P.devs.forEach((d) => {
-      const s = spec(d) || {};
-      const br = (lib().BRANDS[s.brand] || {}).name || '';
-      const parts = d.type === 'dbus' ? [`Шина ${d.cond || 'N'} на DIN-рейку`, `${S.fmt(d.w, 1)} мод.`] : d.type === 'stop' ? ['Ограничитель на DIN-рейку'] : [br === 'Общие' || br === 'Мои' ? '' : br, s.series || d.type, d.poles ? d.poles + 'P' : '', d.curve ? d.curve + (d.In || '') : d.In ? d.In + ' А' : '', d.ma ? d.ma + ' мА' : '', d.rt ? 'тип ' + d.rt : ''].filter(Boolean);
-      const art = d.art || '';
-      add('d' + parts.join('|') + '|' + art, parts.join(' '), 1, 'шт', art);
+      if (d.noBom) return;
+      const name = devName(d), art = artOf(d);
+      add('d' + name + '|' + art, name, 1, 'шт', art);
     });
     P.combs.forEach((c) => add('comb' + (c.kind || 'PIN') + c.conds.length, `Шина соединительная ${c.kind === 'FORK' ? 'FORK (вилка)' : 'PIN (штырь)'} ${c.conds.length === 3 ? '3P' : '1P'}, отрезок`, 1));
     P.buses.forEach((b) => add('bus' + b.kind + b.n, `Шина ${b.kind === 'PE' ? 'PE' : 'N'} на ${b.n} отверстий`, 1));
@@ -700,8 +729,12 @@
     Object.values(at).forEach((arr) => { if (arr.length === 2 && arr[0] === arr[1]) two[arr[0]] = (two[arr[0]] || 0) + 1; else arr.forEach((m) => { one[m] = (one[m] || 0) + 1; }); });
     Object.keys(one).sort((a, b) => a - b).forEach((m) => add('f' + m, `Наконечник НШВИ ${String(m).replace('.', ',')} мм²`, Math.ceil(one[m] * 1.2)));
     Object.keys(two).sort((a, b) => a - b).forEach((m) => add('f2' + m, `Наконечник двойной НШВИ2 ${String(m).replace('.', ',')} мм²`, Math.ceil(two[m] * 1.2)));
-    const nums = P.wires.filter((w) => w.num !== '' && w.num != null).length;
-    if (nums && WN(P).show) add('mk', 'Маркер провода с цифрой (по два на провод)', nums * 2);
+    /* маркеры покупают по цифрам: на каждый конец провода — по маркеру на каждую цифру номера */
+    if (WN(P).show) {
+      const dig = {};
+      P.wires.forEach((w) => { if (w.num === '' || w.num == null) return; String(w.num).split('').forEach((c) => { dig[c] = (dig[c] || 0) + 2; }); });
+      Object.keys(dig).sort().forEach((c) => add('mk' + c, `Маркер провода «${c}»`, dig[c]));
+    }
     add('enc', `Корпус на ${P.rows * P.mods} модулей (${P.rows} × ${P.mods}), шаг реек ${P.pitch || 134} мм`, 1);
     return Object.values(rows);
   }
@@ -756,5 +789,5 @@
     return errs;
   }
 
-  S.edCore = { usedAt, styleOf, exitDir, WN, VIEW, nextWireNum, numberWires, wireLen, WCOL, wireColor, MARK, endName, journal, autoStops, copyDevs, pasteDevs, ductH, pitchOf, railOp, placeBlock, fixCombs, faults, busBad, rcdFaults, ownClass, combGroups, G, PITCHES, PRESETS, PREFIX, COND_COL, FERRULE, SECTIONS, blank, sync, W, H, rowTop, railY, ductTop, devGeo, devH, terms, termNames, busW, busGeo, busSlot, busMaxX, busFree, busPlace, arrangeBuses, balanceBuses, feedCores, feedPt, lineCores, linePt, glandX, endInfo, route, pathLen, keyOf, nets, canWire, guessCond, checks, fromBuilder, bom, groups, nextId, fits, placeShift, placeInsert, resize, autoLine, renameDev, renumber, validate, spec, passPairs };
+  S.edCore = { artOf, faceOf, devName, elements, usedAt, styleOf, exitDir, WN, VIEW, nextWireNum, numberWires, wireLen, WCOL, wireColor, MARK, endName, journal, autoStops, copyDevs, pasteDevs, ductH, pitchOf, railOp, placeBlock, fixCombs, faults, busBad, rcdFaults, ownClass, combGroups, G, PITCHES, PRESETS, PREFIX, COND_COL, FERRULE, SECTIONS, blank, sync, W, H, rowTop, railY, ductTop, devGeo, devH, terms, termNames, busW, busGeo, busSlot, busMaxX, busFree, busPlace, arrangeBuses, balanceBuses, feedCores, feedPt, lineCores, linePt, glandX, endInfo, route, pathLen, keyOf, nets, canWire, guessCond, checks, fromBuilder, bom, groups, nextId, fits, placeShift, placeInsert, resize, autoLine, renameDev, renumber, validate, spec, passPairs };
 })();

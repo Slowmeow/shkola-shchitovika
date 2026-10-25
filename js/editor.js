@@ -72,7 +72,7 @@
     const s = E.sel, P = E.P;
     if (!s) return null;
     if (s.kind === 'devs') { const ds = s.ids.map((id) => P.devs.find((d) => d.id === id)).filter(Boolean); return ds.length ? ds : null; }
-    const list = { dev: P.devs, wire: P.wires, bus: P.buses, line: P.lines, comb: P.combs }[s.kind];
+    const list = { dev: P.devs, wire: P.wires, bus: P.buses, line: P.lines, comb: P.combs, note: P.notes || [] }[s.kind];
     return (list && list.find((x) => x.id === s.id)) || null;
   };
   /* выделение: один аппарат, несколько или ничего */
@@ -94,6 +94,42 @@
   /* ---------- стили ---------- */
   const CSS = `
 .ed-wrap{max-width:none;padding:12px 16px 24px}
+.ed-rib{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--bg);margin-bottom:8px}
+.ed-rib-tabs{display:flex;gap:2px;align-items:center;padding:4px 8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.ed-rib-tabs .inp{width:240px;max-width:40vw;padding:3px 8px;font-size:14px;font-weight:600;margin:0 10px 4px 0}
+.ed-rib-tabs [data-rtab]{border:0;background:none;padding:6px 12px;font-size:13.5px;color:var(--fg-muted);border-bottom:2px solid transparent;cursor:pointer}
+.ed-rib-tabs [data-rtab][aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
+.ed-rib-tabs .sp{flex:1}
+.ed-rib-body{display:flex;align-items:stretch;padding:6px 6px 4px;overflow-x:auto;min-height:64px}
+.ed-grp{display:flex;flex-direction:column;justify-content:space-between;padding:0 8px;border-right:1px solid var(--border-muted)}
+.ed-grp:last-child{border-right:0}
+.ed-grp .gi{display:flex;gap:2px;align-items:center}
+.ed-grp .gl{font-size:11px;color:var(--fg-subtle);text-align:center;margin-top:3px;white-space:nowrap}
+.ed-col{display:flex;flex-direction:column;gap:3px;margin:0 6px}
+.ed-rb{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid transparent;background:none;border-radius:6px;padding:4px 6px;font-size:12px;color:var(--fg);cursor:pointer;white-space:nowrap;min-width:50px;line-height:1.2}
+.ed-rb:hover{background:var(--bg-muted);border-color:var(--border)}
+.ed-rb[aria-pressed="true"]{background:var(--accent-subtle);border-color:var(--accent);color:var(--accent)}
+.ed-rb .ic{width:18px;height:18px}
+.ed-rb .nic{width:18px;height:18px}
+.ed-rb.sm{flex-direction:row;min-width:0;padding:3px 9px;margin-bottom:4px}
+.ed-rck{display:flex;gap:5px;align-items:center;font-size:12.5px;white-space:nowrap;color:var(--fg);cursor:pointer}
+.ed-rib select{font-size:13px;padding:3px 6px;border:1px solid var(--btn-border);border-radius:6px;background:var(--bg);color:var(--fg)}
+.ed-rib input[type="number"]{font-size:12.5px;padding:1px 4px;border:1px solid var(--btn-border);border-radius:5px;background:var(--bg);color:var(--fg)}
+.ed-card{position:relative}
+.ed-myb{position:absolute;top:4px;right:4px;display:flex;gap:2px}
+.ed-myb button{border:1px solid var(--border);background:var(--bg);border-radius:5px;padding:2px 4px;cursor:pointer;color:var(--fg-muted);line-height:0}
+.ed-myb button:hover{color:var(--danger);border-color:var(--danger)}
+.ed-myb .ic{width:14px;height:14px}
+body.ed-full .topbar,body.ed-full .xpstrip,body.ed-full #tabs,body.ed-full .tabs{display:none!important}
+body.ed-full main{margin-left:0!important;padding:0!important}
+body.ed-full .ed-wrap{padding:6px 8px;max-width:none;height:100vh;box-sizing:border-box;display:flex;flex-direction:column}
+body.ed-full .ed-rib{flex:none}
+body.ed-full .ed-main{flex:1;min-height:0;height:auto}
+body.ed-full .ed-side{max-height:none;height:100%;box-sizing:border-box}
+body.ed-full .ed-center{height:100%;min-height:0}
+body.ed-full [data-pane]{min-height:0!important}
+body.ed-full .ed-canvas{max-height:none;min-height:0}
+@media (min-width:761px){body.ed-full .ed-main{grid-template-columns:200px minmax(0,1fr) 250px;grid-template-rows:minmax(0,1fr)}body.ed-full .ed-props{grid-column:auto}}
 .ed-top{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 .ed-top .inp{flex:1 1 180px;max-width:320px}
 .ed-top .sep{width:1px;align-self:stretch;background:var(--border);margin:0 4px}
@@ -173,15 +209,53 @@
     const q = E.q.trim().toLowerCase();
     const list = L.list().filter((s) => (E.brand === 'all' || s.brand === E.brand || (E.brand !== 'my' && s.brand === 'gen')) && (!q || (s.series + ' ' + (L.BRANDS[s.brand] || {}).name + ' ' + L.KIND[s.kind]).toLowerCase().includes(q)));
     const kinds = Object.keys(L.KIND).filter((k) => list.some((s) => s.kind === k));
-    const brands = ['ekf', 'iek', 'abb', 'se', 'my', 'all'];
+    const brands = ['ekf', 'iek', 'abb', 'se', 'sys', 'my', 'all'];
     return `<input class="inp" data-q placeholder="Поиск: АВДТ, ВА47-29, УЗО" value="${esc(E.q)}" aria-label="Поиск по библиотеке">
 <div class="ed-chips">${brands.map((b) => `<button type="button" data-brand="${b}" aria-pressed="${E.brand === b}">${b === 'all' ? 'Все' : esc(L.BRANDS[b].name)}</button>`).join('')}</div>
 ${kinds.map((k) => `<div class="ed-kind">${esc(L.KIND[k])}</div>${list.filter((s) => s.kind === k).map((s) => {
       const ws = s.wOpts ? `${s.wOpts.map((x) => String(x).replace('.', ',')).join(' / ')}` : s.poles.map((p) => `${p}P ${String(L.widthOf(s, p)).replace('.', ',')}`).join(' · ');
-      return `<div class="ed-card" data-sid="${esc(s.id)}" title="Перетащи на рейку или нажми, чтобы поставить на свободное место"><b>${esc(s.brand === 'gen' || s.brand === 'my' ? s.series : (L.BRANDS[s.brand].name + ' ' + s.series))}</b><span>${s.In ? `${S.fmt(s.In[0], 1)}–${s.In[s.In.length - 1]} А` : ''}${s.ma ? ` · ${s.ma.join('/')} мА` : ''}${s.curves ? ` · ${s.curves.join(', ')}` : ''}</span><span class="w">${ws} мод.</span></div>`;
+      return `<div class="ed-card" data-sid="${esc(s.id)}" title="Перетащи на рейку или нажми, чтобы поставить на свободное место"><b>${esc(s.brand === 'gen' || s.brand === 'my' ? s.series : (L.BRANDS[s.brand].name + ' ' + s.series))}</b><span>${s.In ? `${S.fmt(s.In[0], 1)}–${s.In[s.In.length - 1]} А` : ''}${s.ma ? ` · ${s.ma.join('/')} мА` : ''}${s.curves ? ` · ${s.curves.join(', ')}` : ''}</span><span class="w">${ws} мод.</span>${s.brand === 'my' ? `<span class="ed-myb"><button type="button" data-myedit="${esc(s.id)}" title="Изменить">${S.icon('edit')}</button><button type="button" data-mydel="${esc(s.id)}" title="Удалить из библиотеки">${S.icon('trash')}</button></span>` : ''}</div>`;
     }).join('')}`).join('') || '<p class="small muted">Ничего не найдено.</p>'}
 <div class="row" style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" data-act="mydev">${S.icon('plus')}Свой аппарат</button><button class="btn sm" type="button" data-act="mylib-export">${S.icon('download')}Мои — в файл</button><button class="btn sm" type="button" data-act="mylib-import">${S.icon('upload')}Из файла</button></div>
 <p class="small muted" style="margin-top:8px">Ширина — в модулях по 17,5 мм. Габариты сверяй с паспортом аппарата перед заказом.</p>`;
+  }
+
+  /* ---------- лента команд, как в Visio: Главная, Вставка, Провода, Вид, Отчёты ---------- */
+  const RTABS = [['home', 'Главная'], ['insert', 'Вставка'], ['wires', 'Провода'], ['view', 'Вид'], ['reports', 'Отчёты']];
+  const SHEETS = [['bom', 'Оборудование'], ['pe', 'Перечень элементов'], ['journal', 'Кабельный журнал'], ['groups', 'Группы'], ['scheme', 'Однолинейная схема'], ['checks', 'Проверки']];
+  function ribbonHTML() {
+    const C = K(), P = E.P, wn = C.WN(P), vw = C.VIEW(P), sh = vw.sheet || {};
+    const rb = (attrs, icon, label, pressed, title) => `<button type="button" class="ed-rb" ${attrs}${pressed != null ? ` aria-pressed="${!!pressed}"` : ''}${title ? ` title="${esc(title)}"` : ''}>${icon ? S.icon(icon) : '<span class="nic"></span>'}<span>${label}</span></button>`;
+    const grp = (label, inner) => `<div class="ed-grp"><div class="gi">${inner}</div><div class="gl">${label}</div></div>`;
+    const ck = (key, on, label) => `<label class="ed-rck"><input type="checkbox" data-pf="${key}"${on ? ' checked' : ''}> ${label}</label>`;
+    const tool = (t, icon, label, title) => rb(`data-tool="${t}"`, icon, label, E.tool === t, title);
+    const t = E.rtab || 'home';
+    const zoom = grp('Масштаб', rb('data-act="zoom-out"', 'minus', 'Мельче') + rb('data-act="zoom-fit"', 'eye', E.fit === 'all' ? 'По ширине' : 'Весь щит') + rb('data-act="zoom-in"', 'plus', 'Крупнее'));
+    if (t === 'home') return grp('Щит', `<div class="ed-menu">${rb('data-act="menu" aria-haspopup="true"', 'panel', 'Щит ▾')}<div class="ed-drop" data-drop>
+<button type="button" data-act="new">${S.icon('plus')}Новый щит</button>
+<button type="button" data-act="from-builder">${S.icon('panel')}Взять из конструктора</button>
+<button type="button" data-act="open">${S.icon('doc')}Мои щиты</button>
+<hr><button type="button" data-act="export">${S.icon('download')}Скачать файл щита</button>
+<button type="button" data-act="import">${S.icon('upload')}Открыть файл щита</button>
+</div></div>` + rb('data-act="save-as"', 'save', 'Сохранить', null, 'Сохранить в «Мои щиты»'))
+      + grp('Правка', rb('data-act="undo"', 'back', 'Отменить', null, 'Ctrl+Z') + rb('data-act="redo"', 'next', 'Вернуть', null, 'Ctrl+Y') + rb('data-act="copy"', 'copy', 'Копировать', null, 'Ctrl+C') + rb('data-act="cut"', 'minus', 'Вырезать', null, 'Ctrl+X') + rb('data-act="paste"', 'doc', 'Вставить', null, 'Ctrl+V') + rb('data-act="del"', 'trash', 'Удалить', null, 'Del'))
+      + grp('Инструменты', tool('select', 'hand', 'Выбор') + tool('wire', 'cable', 'Провод', 'Нажми на клемму, затем на вторую') + tool('erase', 'x', 'Ластик', 'Нажми на то, что удалить') + tool('ruler', 'target', 'Линейка', 'Протяни — покажет расстояние в мм') + tool('note', 'edit', 'Выноска', 'Нажми на щит — появится выноска с текстом'))
+      + zoom
+      + grp('Готово', rb('data-act="check"', 'shield', 'Проверить') + rb('data-act="print"', 'doc', 'Печать и PDF'));
+    if (t === 'insert') return grp('Добавить на щит', rb('data-act="add-line"', 'cable', 'Линия', null, 'Отходящий кабель') + rb('data-act="add-busN"', 'plus', 'Шина N') + rb('data-act="add-busPE"', 'plus', 'Шина PE') + rb('data-act="stops"', 'lock', 'Ограничители', null, 'По краям аппаратов на каждой рейке') + tool('note', 'edit', 'Выноска'))
+      + grp('Рейки', rb('data-rail="insert" data-k="' + P.rows + '"', 'plus', 'Рейка снизу') + rb('data-act="arrange"', 'layers', 'Разложить шины') + rb('data-act="renumber"', 'list', 'Перенумеровать', null, 'Аппараты: QF1, QF2… слева направо, сверху вниз'))
+      + grp('Свои аппараты', rb('data-act="mydev"', 'plus', 'Свой аппарат') + rb('data-act="mylib-export"', 'download', 'Мои — в файл') + rb('data-act="mylib-import"', 'upload', 'Из файла'));
+    if (t === 'wires') return grp('Прокладка', `<select data-pf="wireStyle" title="Как прокладывать новые и все провода без своей настройки">${opt(['duct', 'loop', 'line'], P.wireStyle || 'duct', (v) => STYLE[v])}</select>`)
+      + grp('Маркировка проводов', `<div class="ed-col">${ck('wnShow', wn.show, 'Номера на проводах')}${ck('wnColor', wn.color, 'Цветные кольца')}</div><div class="ed-col">${ck('wnAuto', wn.auto, 'Новым — номер сам')}<label class="ed-rck">с <input type="number" min="0" step="1" data-pf="wnStart" value="${wn.start}" style="width:52px"></label></div>` + rb('data-act="wn-renum"', 'refresh', 'Перенумеровать'))
+      + grp('Длина и наконечники', `<div class="ed-col"><label class="ed-rck">Запас <input type="number" min="0" max="100" step="5" data-pf="slack" value="${P.slack == null ? 20 : P.slack}" style="width:52px"> %</label>${ck('ferr', vw.ferrules, 'Наконечники НШВИ')}</div>`)
+      + grp('Журнал', rb('data-act="tab-journal"', 'list', 'Кабельный журнал') + rb('data-act="csv-journal"', 'download', 'В Excel'));
+    if (t === 'view') return grp('Показать на щите', `<div class="ed-col">${ck('stickers', vw.stickers, 'Наклейки QF1, QD1…')}${ck('dims', vw.dims, 'Размеры')}</div>`)
+      + grp('На один экран: таблицы рядом со щитом', `<div class="ed-col">${SHEETS.slice(0, 3).map(([k, l]) => ck('sheet:' + k, sh[k], l)).join('')}</div><div class="ed-col">${SHEETS.slice(3).map(([k, l]) => ck('sheet:' + k, sh[k], l)).join('')}</div>`)
+      + zoom
+      + grp('Экран', rb('data-act="full"', 'eye', 'Весь экран', document.body.classList.contains('ed-full'), 'Только щит, как в Visio'));
+    return grp('Открыть', rb('data-act="tab-bom"', 'list', 'Спецификация') + rb('data-act="tab-pe"', 'list', 'Перечень элементов') + rb('data-act="tab-journal"', 'cable', 'Кабельный журнал') + rb('data-act="tab-groups"', 'layers', 'Группы') + rb('data-act="tab-scheme"', 'flow', 'Однолинейная схема') + rb('data-act="tab-checks"', 'shield', 'Проверки'))
+      + grp('В Excel', rb('data-act="csv-bom"', 'download', 'Спецификация') + rb('data-act="csv-pe"', 'download', 'Перечень') + rb('data-act="csv-journal"', 'download', 'Журнал'))
+      + grp('Печать', rb('data-act="print"', 'doc', 'Листы с рамкой') + rb('data-act="print-tags"', 'cable', 'Бирки на кабели') + rb('data-act="print-labels"', 'edit', 'Наклейки на щит', null, 'Полоски с обозначениями и назначением в масштабе 1:1'));
   }
 
   /* ---------- свойства ---------- */
@@ -206,23 +280,10 @@ ${kinds.map((k) => `<div class="ed-kind">${esc(L.KIND[k])}</div>${list.filter((s
 <div class="ed-rails">${[...Array(P.rows).keys()].map((k) => { const used = P.devs.filter((d) => d.row === k).reduce((a, d) => a + d.w, 0); return `${k ? `<div class="ed-rail ed-pitch"><span>↕ между ${k} и ${k + 1}</span><select data-pf="rp${k - 1}" title="Расстояние между осями реек, мм">${opt(RPITCH, C.pitchOf(P, k - 1), (v) => `${v} мм`)}</select></div>` : ''}<div class="ed-rail"><span>Рейка ${k + 1} · занято ${S.fmt(used, 1)} из ${P.mods}</span><button type="button" data-rail="insert" data-k="${k}" title="Вставить пустую рейку над этой">+ выше</button>${k + 1 < P.rows ? `<button type="button" data-rail="swap" data-k="${k}" title="Поменять местами с рейкой ниже">⇅</button>` : ''}${used ? '' : `<button type="button" data-rail="remove" data-k="${k}" title="Убрать пустую рейку">×</button>`}</div>`; }).join('')}</div>
 <label>Шаг реек для всех (сверху и снизу — до шин)</label><select data-pf="pitch">${opt(RPITCH, P.pitch || 134, (v) => `${v} мм${v === 134 ? ' (по умолчанию)' : ''}`)}</select>
 <div class="row"><button class="btn sm" type="button" data-act="stops">Ограничители по краям реек</button></div>
-<h4>Провода</h4>
-<label>Как прокладывать</label><select data-pf="wireStyle">${opt(['duct', 'loop', 'line'], P.wireStyle || 'duct', (v) => STYLE[v])}</select>
-<div class="g2"><div><label>Запас длины, %</label><input class="inp" type="number" min="0" max="100" step="5" data-pf="slack" value="${P.slack == null ? 20 : P.slack}"></div><div><label>Номера с</label><input class="inp" type="number" min="0" step="1" data-pf="wnStart" value="${C.WN(P).start}"></div></div>
-<label class="ed-chk"><input type="checkbox" data-pf="wnShow"${C.WN(P).show ? ' checked' : ''}> Номера на проводах (маркировка)</label>
-<label class="ed-chk"><input type="checkbox" data-pf="wnColor"${C.WN(P).color ? ' checked' : ''}> Цветные кольца по цифрам</label>
-<label class="ed-chk"><input type="checkbox" data-pf="wnAuto"${C.WN(P).auto ? ' checked' : ''}> Новым проводам — номер сам</label>
-<label class="ed-chk"><input type="checkbox" data-pf="ferr"${C.VIEW(P).ferrules ? ' checked' : ''}> Наконечники НШВИ на рисунке</label>
-<div class="row"><button class="btn sm" type="button" data-act="wn-renum">Перенумеровать провода</button><button class="btn sm" type="button" data-act="tab-journal">Кабельный журнал</button></div>
-<h4>Вид</h4>
-<label class="ed-chk"><input type="checkbox" data-pf="stickers"${C.VIEW(P).stickers ? ' checked' : ''}> Наклейки с обозначениями (QF1, QD1…)</label>
-<label class="ed-chk"><input type="checkbox" data-pf="dims"${C.VIEW(P).dims ? ' checked' : ''}> Размеры: длина реек, шаг, высота</label>
+<p class="small muted">Провода, маркировка, вид, таблицы и отчёты — на ленте сверху: «Вставка», «Провода», «Вид», «Отчёты».</p>
 <h4>Ввод</h4>
 <label>Питание</label><select data-pf="phases">${opt([1, 3], P.feed.phases, (v) => (v === 1 ? 'Однофазный 230 В' : 'Трёхфазный 400 В'))}</select>
 <label>Система заземления</label><select data-pf="earthing">${opt(['TN-C-S', 'TN-S', 'TN-C>S', 'TT'], P.feed.earthing, (v) => ({ 'TN-C-S': 'TN-C-S: N и PE приходят раздельно', 'TN-S': 'TN-S', 'TN-C>S': 'PEN делится в этом щите', TT: 'TT: свой заземлитель' }[v]))}</select>
-<h4>Добавить</h4>
-<div class="row" style="margin-top:4px"><button class="btn sm" type="button" data-act="add-line">${S.icon('plus')}Линия</button><button class="btn sm" type="button" data-act="add-busN">${S.icon('plus')}Шина N</button><button class="btn sm" type="button" data-act="add-busPE">${S.icon('plus')}Шина PE</button></div>
-<div class="row"><button class="btn sm" type="button" data-act="arrange">Разложить шины</button><button class="btn sm" type="button" data-act="renumber">Перенумеровать аппараты</button></div>
 <h4>Основная надпись</h4>
 <label>Объект</label><input class="inp" data-mf="object" value="${esc(P.meta.object || '')}">
 <div class="g2"><div><label>Разработал</label><input class="inp" data-mf="author" value="${esc(P.meta.author || '')}"></div><div><label>Проверил</label><input class="inp" data-mf="checker" value="${esc(P.meta.checker || '')}"></div></div>
@@ -251,7 +312,10 @@ ${keysHelp}`;
       return `<h3>${esc(d.id)} — ${esc(L.KIND[s.kind] || d.type)}</h3>
 <div class="g2"><div><label>Обозначение</label><input class="inp" data-df="id" value="${esc(d.id)}"></div><div><label>Рейка, место</label><div class="ed-kv">${d.row + 1}, с ${S.fmt(d.x + 1, 1)}-го мод. (${S.fmt(d.x * C.G.MOD, 1)} мм от края)</div></div></div>
 <label>Назначение</label><input class="inp" data-df="label" value="${esc(d.label || '')}" placeholder="Розетки кухни">
-<label>Артикул (для спецификации)</label><input class="inp" data-df="art" value="${esc(d.art || '')}" placeholder="с упаковки или из каталога">
+<label>Артикул (для спецификации)</label><input class="inp" data-df="art" value="${esc(d.art || '')}" placeholder="${esc(C.artOf(Object.assign({}, d, { art: '' })) || 'с упаковки или из каталога')}">
+${!d.art && C.artOf(d) ? '<p class="small muted" style="margin:2px 0 0">Подставлен по шаблону каталога производителя — сверь перед заказом.</p>' : ''}
+<label>Наименование в спецификации</label><input class="inp" data-df="name" value="${esc(d.name || '')}" placeholder="${esc(C.devName(Object.assign({}, d, { name: '' })))}">
+<label class="ed-chk"><input type="checkbox" data-df="noBom"${d.noBom ? ' checked' : ''}> Не включать в спецификацию и перечень (уже стоит, не покупать)</label>
 <label>Серия</label><select data-df="sid">${same.map((x) => `<option value="${esc(x.id)}"${x.id === d.sid ? ' selected' : ''}>${esc(x.brand === 'gen' || x.brand === 'my' ? x.series : (L.BRANDS[x.brand] || {}).name + ' ' + x.series)}</option>`).join('')}</select>
 ${s.poles && s.poles.length > 1 ? `<label>Полюсов</label><select data-df="poles">${opt(s.poles, d.poles)}</select>` : ''}
 ${s.In ? `<label>Номинальный ток, А</label><select data-df="In">${opt(s.In, d.In)}</select>` : ''}
@@ -303,6 +367,9 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
 <p class="small muted">Жилы подключают проводами: нажми на цветную точку жилы внизу, затем на клемму. Проще — выбери автомат и нажми «Вывести линию».</p>
 <div class="row"><button class="btn sm" type="button" data-act="del">${S.icon('trash')}Удалить</button></div>`;
     }
+    if (k === 'note') return `<h3>Выноска</h3><label>Текст</label><textarea class="inp" data-nf="text" rows="4">${esc(o.text || '')}</textarea>
+<p class="small muted">Тяни рамку выноски, чтобы переставить текст, и точку на конце — чтобы показать на нужное место. Выноски печатаются вместе со щитом.</p>
+<div class="row"><button class="btn sm" type="button" data-act="del">${S.icon('trash')}Удалить</button></div>`;
     if (k === 'comb') return `<h3>Гребёнка</h3><div class="ed-kv"><span>Аппараты:</span> ${esc(o.devs.join(', '))}</div><div class="ed-kv"><span>Фазы:</span> ${esc(o.conds.join(', '))}</div>
 <label>Тип шины</label><select data-cf="kind">${opt(['PIN', 'FORK'], o.kind || 'PIN', (v) => (v === 'PIN' ? 'PIN — штырь' : 'FORK — вилка'))}</select>
 <div class="row"><button class="btn sm" type="button" data-act="comb-grow">Удлинить вправо</button><button class="btn sm" type="button" data-act="comb-shrink">Укоротить</button><button class="btn sm" type="button" data-act="del">${S.icon('trash')}Удалить</button></div>
@@ -322,13 +389,15 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
 
   function myFormHTML() {
     const L = LB();
-    return `<h3>Свой аппарат</h3>
-<label>Производитель и серия</label><input class="inp" data-my="series" placeholder="Меандр УЗМ-51М">
-<label>Вид</label><select data-my="kind">${opt(Object.keys(L.KIND).filter((k) => k !== 'dbus'), 'mcb', (k) => L.KIND[k])}</select>
-<div class="g2"><div><label>Полюсов</label><select data-my="poles">${opt([1, 2, 3, 4], 1)}</select></div><div><label>Ширина, мод.</label><select data-my="w">${opt([0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9], 1)}</select></div></div>
-<label>Номиналы, А (через запятую)</label><input class="inp" data-my="In" placeholder="16, 25, 32, 40, 63">
-<label>Высота корпуса, мм</label><input class="inp" type="number" data-my="h" value="85">
-<label>Сечение клемм, примечание</label><input class="inp" data-my="note" placeholder="до 25 мм²; по паспорту">
+    const m = (E.myEdit && L.loadMine().find((x) => x.id === E.myEdit)) || {};
+    return `<h3>${m.id ? 'Изменить аппарат' : 'Свой аппарат'}</h3>
+<label>Производитель и серия</label><input class="inp" data-my="series" placeholder="Меандр УЗМ-51М" value="${esc(m.series || '')}">
+<label>Вид</label><select data-my="kind">${opt(Object.keys(L.KIND).filter((k) => k !== 'dbus'), m.kind || 'mcb', (k) => L.KIND[k])}</select>
+<div class="g2"><div><label>Полюсов</label><select data-my="poles">${opt([1, 2, 3, 4], (m.poles && m.poles[0]) || 1)}</select></div><div><label>Ширина, мод.</label><select data-my="w">${opt([0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9], m.w || 1)}</select></div></div>
+<label>Номиналы, А (через запятую)</label><input class="inp" data-my="In" placeholder="16, 25, 32, 40, 63" value="${esc((m.In || []).join(', '))}">
+<label>Высота корпуса, мм</label><input class="inp" type="number" data-my="h" value="${m.h || 85}">
+<label>Артикул</label><input class="inp" data-my="art" placeholder="с упаковки" value="${esc(m.art || '')}">
+<label>Сечение клемм, примечание</label><input class="inp" data-my="note" placeholder="до 25 мм²; по паспорту" value="${esc(m.note || '')}">
 <div class="row"><button class="btn sm primary" type="button" data-act="mydev-save">${S.icon('save')}Сохранить в библиотеку</button><button class="btn sm" type="button" data-act="mydev-cancel">Отмена</button></div>
 <p class="small muted">Аппарат появится в библиотеке во вкладке «Мои». Библиотеку можно выгрузить в файл и загрузить на другом компьютере.</p>`;
   }
@@ -391,6 +460,10 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
       return `<div class="ed-pane">${gr.length ? S.B.tbl(['№', 'Назначение', 'Защита', 'УЗО', 'Кабель', 'Длина, м'], gr.map((x) => [esc(String(x.l.num)), esc(x.l.name), x.prot ? esc(`${x.prot.id} ${x.prot.curve || ''}${x.prot.In || ''}${x.prot.ma ? ' ' + x.prot.ma + ' мА' : ''}`) : '<span style="color:var(--danger)">нет</span>', esc((x.chain.find((d) => d.type === 'rcd') || {}).id || (x.prot && x.prot.type === 'rcbo' ? 'в дифавтомате' : '—')), esc(x.l.cable || ''), esc(String(x.l.len || ''))])) : '<p class="muted">Линий пока нет.</p>'}<p class="small muted">Эту таблицу печатают и вклеивают на дверцу щитка (ГОСТ 32395-2020, п. 6.2.25).</p></div>`;
     }
     if (E.tab === 'bom') return `<div class="ed-pane"><div class="row" style="margin-bottom:8px;display:flex;gap:6px"><button class="btn sm" type="button" data-act="csv-bom">${S.icon('download')}В Excel (CSV)</button></div>${S.B.tbl(['№', 'Наименование', 'Артикул', 'Кол-во'], C.bom(P).map((b, i) => [String(i + 1), esc(b.name), esc(b.art || ''), `${S.fmt(b.qty, 1)} ${esc(b.unit)}`]))}<p class="small muted">Провод — по длине трасс с запасом из свойств щита, наконечники — по числу концов плюс 20 %; два провода одного сечения в одной клемме — один двойной наконечник. Артикулы вписывай в свойствах аппарата — с упаковки или из каталога.</p></div>`;
+    if (E.tab === 'pe') {
+      const R = C.elements(P);
+      return `<div class="ed-pane"><div class="row" style="margin-bottom:8px;display:flex;gap:6px"><button class="btn sm" type="button" data-act="csv-pe">${S.icon('download')}В Excel (CSV)</button></div>${R.length ? S.B.tbl(['Поз. обозначение', 'Наименование', 'Кол.', 'Примечание'], R.map((r) => [esc(r.pos), esc(r.name), String(r.qty), esc(r.note)])) : '<p class="muted">Аппаратов пока нет.</p>'}<p class="small muted">Перечень элементов — таблица к схеме: позиционное обозначение, наименование и количество. Одинаковые аппараты записаны одной строкой, номера подряд — через тире (QF2–QF5). Аппараты с галочкой «не включать» сюда не попадают.</p></div>`;
+    }
     if (E.tab === 'journal') {
       const J = C.journal(P);
       return `<div class="ed-pane"><div class="row" style="margin-bottom:8px;display:flex;gap:6px"><button class="btn sm" type="button" data-act="csv-journal">${S.icon('download')}В Excel (CSV)</button><button class="btn sm" type="button" data-act="wn-renum">Перенумеровать провода</button></div>${J.length ? S.B.tbl(['№', 'Откуда', 'Куда', 'Марка', 'Сечение, мм²', 'Цвет', 'Длина, м'], J.map((r) => [esc(String(r.num)), esc(r.from), esc(r.to), esc(r.mark), String(r.mm2).replace('.', ','), esc(r.color), S.fmt(r.len, 2)])) : '<p class="muted">Проводов пока нет.</p>'}<p class="small muted">Кабельный журнал — список всех проводов щита: номер на маркере провода, откуда и куда он идёт. По нему собирают щит и ищут провод при ремонте. Номер одинаковый на обоих концах провода.</p></div>`;
@@ -430,8 +503,38 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
     let extra = '';
     if (V && dr && dr.kind === 'new') { const nd = V.devs.find((d) => d.id === '…'); if (nd) extra = S.edDraw.device(V, nd, {}); }
     const ov = svg.querySelector('[data-overlay]');
-    if (ov) ov.innerHTML = extra + S.edDraw.overlay(E.P, { ghost: E.ghost, busGhost: E.busGhost, band: E.band, preview: E.preview });
+    if (ov) ov.innerHTML = extra + S.edDraw.overlay(E.P, { ghost: E.ghost, busGhost: E.busGhost, band: E.band, preview: E.preview, ruler: E.ruler });
     status();
+  }
+  /* таблицы рядом со щитом: оборудование, перечень, журнал, группы, схема, проверки — всё на одном экране, как лист Visio */
+  function sheetExtras(P, x0, y0) {
+    const C = K(), sh = C.VIEW(P).sheet || {};
+    const ink = 'var(--fg, #2b2f2c)', line = 'var(--border, #c4cac6)';
+    let y = y0, wMax = 0, out = '';
+    const RH = 6.4, FS = 3.3;
+    const table = (title, head, wd, rows) => {
+      const W = wd.reduce((a, b) => a + b, 0);
+      wMax = Math.max(wMax, W);
+      out += `<text x="${x0}" y="${y + 5}" style="font-size:5px;font-weight:700;fill:${ink}">${esc(title)}</text>`;
+      y += 8;
+      [head].concat(rows).forEach((r, ri) => {
+        out += `<rect x="${x0}" y="${y}" width="${W}" height="${RH}" style="fill:${ri ? 'var(--bg, #fff)' : 'var(--bg-muted, #eee)'};stroke:${line};stroke-width:0.3"/>`;
+        let cx = x0;
+        r.forEach((c, ci) => { const max = Math.floor(wd[ci] / (FS * 0.56)); const str = String(c == null ? '' : c); out += `<text x="${cx + 1.4}" y="${y + 4.5}" style="font-size:${FS}px;fill:${ink};${ri ? '' : 'font-weight:700;'}">${esc(str.length > max ? str.slice(0, max - 1) + '…' : str)}</text>`; cx += wd[ci]; });
+        y += RH;
+      });
+      y += 10;
+    };
+    if (sh.bom) table('Оборудование в щите', ['№', 'Наименование', 'Артикул', 'Кол-во'], [8, 120, 40, 22], C.bom(P).map((b, i) => [i + 1, b.name, b.art || '', `${S.fmt(b.qty, 1)} ${b.unit}`]));
+    if (sh.pe) table('Перечень элементов', ['Поз. обозначение', 'Наименование', 'Кол.', 'Примечание'], [34, 110, 12, 34], C.elements(P).map((r) => [r.pos, r.name, r.qty, r.note]));
+    if (sh.journal) table('Кабельный журнал', ['№', 'Откуда', 'Куда', 'Марка', 'мм²', 'Цвет', 'Длина, м'], [10, 34, 34, 34, 12, 30, 18], C.journal(P).map((r) => [r.num, r.from, r.to, r.mark, String(r.mm2).replace('.', ','), r.color, S.fmt(r.len, 2)]));
+    if (sh.groups) table('Группы', ['№', 'Назначение', 'Защита', 'УЗО', 'Кабель'], [10, 70, 40, 24, 46], C.groups(P).map((g) => [g.l.num, g.l.name, g.prot ? `${g.prot.id} ${g.prot.curve || ''}${g.prot.In || ''}` : 'нет', (g.chain.find((d) => d.type === 'rcd') || {}).id || (g.prot && g.prot.type === 'rcbo' ? 'дифавт.' : '—'), g.l.cable || '']));
+    if (sh.checks) table('Проверки', ['', 'Что найдено'], [10, 180], C.checks(P).map((c) => [c.level === 'ok' ? '✓' : c.level === 'warn' ? '!' : '✗', c.text]));
+    if (sh.scheme) {
+      const sv = schemeSVG(), mm = sv.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+      if (mm) { const sc = 0.5, vw = +mm[1], vh = +mm[2]; out += `<text x="${x0}" y="${y + 5}" style="font-size:5px;font-weight:700;fill:${ink}">Однолинейная схема</text>`; y += 8; out += `<svg x="${x0}" y="${y}" width="${vw * sc}" height="${vh * sc}" viewBox="0 0 ${vw} ${vh}">${sv.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</svg>`; y += vh * sc + 10; wMax = Math.max(wMax, vw * sc); }
+    }
+    return wMax ? { svg: out, w: wMax, h: y - y0 } : null;
   }
   function drawCanvas(fast) {
     const root = E.root;
@@ -440,8 +543,10 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
     if (!cv) return;
     const t0 = performance.now();
     const P = E.view || E.P;
-    const D = S.edDraw(P, { sel: E.sel, interactive: true, fast: !!fast, tool: E.tool, wireStart: E.wireStart, ghost: E.ghost, busGhost: E.busGhost, band: E.band, preview: E.preview });
-    const [x, y, w, h] = D.vb;
+    const D = S.edDraw(P, { sel: E.sel, interactive: true, fast: !!fast, tool: E.tool, wireStart: E.wireStart, ghost: E.ghost, busGhost: E.busGhost, band: E.band, preview: E.preview, ruler: E.ruler });
+    let [x, y, w, h] = D.vb;
+    const X = sheetExtras(P, x + w + 12, y + 4);
+    if (X) { D.svg += X.svg; w += X.w + 24; h = Math.max(h, X.h + 8); }
     /* 0 — по ширине окна, -1 — весь щит целиком */
     const fitW = ((cv.clientWidth || 900) - 24) / w, fitH = ((cv.clientHeight || 600) - 24) / h;
     if (E.zoom === -1) E.zoom = Math.max(0.6, Math.min(4, fitW, fitH));
@@ -465,6 +570,8 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
       else { pane.innerHTML = tabHTML(); if (E.tab === 'panel') drawCanvas(); }
     }
     if (part === 'lib') root.querySelector('[data-lib]').innerHTML = libHTML();
+    const rbn = root.querySelector('[data-ribbon]');
+    if (rbn && !part && !rbn.contains(document.activeElement)) rbn.innerHTML = ribbonHTML();
     const u = root.querySelector('[data-act="undo"]'), r = root.querySelector('[data-act="redo"]');
     if (u) u.style.opacity = E.hist.length ? 1 : 0.45;
     if (r) r.style.opacity = E.fut.length ? 1 : 0.45;
@@ -477,8 +584,8 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
     const el = E.root && E.root.querySelector('[data-hint]');
     if (!el) return;
     const dr = E.drag && E.drag.moved;
-    const hov = E.wireStart || (E.drag && E.drag.kind === 'wend') ? E.hover : null;
-    const text = msg ? msg.text : hov || (dr ? (E.drag.kind === 'band' ? 'Отпусти — выделятся аппараты внутри рамки (с Shift — добавятся к выделенным)' : E.drag.kind === 'seg' ? 'Двигай провод в канале · отпусти, чтобы оставить' : E.ghost && !E.ghost.ok ? 'Сюда не помещается: на рейке не хватает места' : E.busGhost ? (E.busGhost.ok ? 'Отпусти, чтобы поставить шину' : 'Здесь шина наезжает на соседнюю') : E.ghost ? (E.ghost.snap ? 'Прилипнет вплотную к соседу · отпусти, чтобы поставить' : 'Отпусти, чтобы поставить · соседи раздвинутся сами') : 'Наведи на рейку') : E.wireStart ? 'Провод: нажми на вторую клемму, отверстие шины или жилу кабеля · Esc — отмена' : E.tool === 'erase' ? 'Ластик: нажми на аппарат, провод, шину, гребёнку или линию — удалится. Esc — обычный режим' : E.tool === 'wire' ? 'Режим проводов: нажми на клемму, с которой начать' : 'Перетащи аппарат из библиотеки на рейку или нажми на него · нажми на клемму, чтобы вести провод · Ctrl+колесо — масштаб');
+    const hov = E.wireStart || (E.drag && E.drag.kind === 'wend') || (E.tool === 'ruler' && E.ruler) ? E.hover : null;
+    const text = msg ? msg.text : hov || (dr ? (E.drag.kind === 'band' ? 'Отпусти — выделятся аппараты внутри рамки (с Shift — добавятся к выделенным)' : E.drag.kind === 'seg' ? 'Двигай провод в канале · отпусти, чтобы оставить' : E.ghost && !E.ghost.ok ? 'Сюда не помещается: на рейке не хватает места' : E.busGhost ? (E.busGhost.ok ? 'Отпусти, чтобы поставить шину' : 'Здесь шина наезжает на соседнюю') : E.ghost ? (E.ghost.snap ? 'Прилипнет вплотную к соседу · отпусти, чтобы поставить' : 'Отпусти, чтобы поставить · соседи раздвинутся сами') : 'Наведи на рейку') : E.wireStart ? 'Провод: нажми на вторую клемму, отверстие шины или жилу кабеля · Esc — отмена' : E.tool === 'ruler' ? 'Линейка: зажми и протяни — покажу расстояние в миллиметрах; к клеммам прилипает' : E.tool === 'note' ? 'Выноска: нажми на место щита, на которое она будет показывать' : E.tool === 'erase' ? 'Ластик: нажми на аппарат, провод, шину, гребёнку или линию — удалится. Esc — обычный режим' : E.tool === 'wire' ? 'Режим проводов: нажми на клемму, с которой начать' : 'Перетащи аппарат из библиотеки на рейку или нажми на него · нажми на клемму, чтобы вести провод · Ctrl+колесо — масштаб');
     el.className = 'ed-status' + (msg ? ' ' + msg.kind : '');
     el.innerHTML = `<span>${esc(text)}</span><span class="z">${Math.round((E.zoom || 1) / 3.78 * 100)} %</span>`;
   }
@@ -488,6 +595,15 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
     status();
     clearTimeout(flash.t);
     flash.t = setTimeout(() => { msg = null; status(); }, 5000);
+  }
+
+  /* весь экран: прячем шапку и меню приложения, редактор на всё окно */
+  function setFull(on) {
+    document.body.classList.toggle('ed-full', !!on);
+    try { localStorage.setItem('shk:ed:full', on ? '1' : ''); } catch (er) { /* без памяти */ }
+    if (E.root) E.root.querySelectorAll('[data-act="full"]').forEach((x) => x.setAttribute('aria-pressed', String(!!on)));
+    if (E.fit !== 'all') E.zoom = 0; else E.zoom = -1;
+    requestAnimationFrame(() => drawCanvas());
   }
 
   /* ---------- координаты ---------- */
@@ -608,12 +724,13 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
       if (s.kind === 'bus') { P.buses = P.buses.filter((b) => b.id !== s.id); P.wires = P.wires.filter((w) => w.a.bus !== s.id && w.b.bus !== s.id); }
       if (s.kind === 'line') { P.lines = P.lines.filter((l) => l.id !== s.id); P.wires = P.wires.filter((w) => w.a.line !== s.id && w.b.line !== s.id); }
       if (s.kind === 'comb') P.combs = P.combs.filter((c) => c.id !== s.id);
+      if (s.kind === 'note') P.notes = (P.notes || []).filter((n) => n.id !== s.id);
       E.sel = null;
       return '';
     });
   }
   function endFromEl(el) {
-    if (el.dataset.tdev) return { dev: el.dataset.tdev, term: el.dataset.term };
+    if (el.dataset.tdev) return { dev: el.dataset.tdev, term: el.dataset.tpin };
     if (el.dataset.tbus) {
       const b = E.P.buses.find((x) => x.id === el.dataset.tbus);
       let slot = Number(el.dataset.slot);
@@ -710,7 +827,7 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
     if (kind === 'dev') return [it('copy', 'Копировать', 'Ctrl+C'), it('cut', 'Вырезать', 'Ctrl+X'), it('paste', 'Вставить', 'Ctrl+V', !E.clip), one ? it('dup', 'Копия рядом', 'Ctrl+D') : '', '<hr>',
       one && ['mcb', 'rcbo', 'sw', 'km'].includes(one.type) ? it('autoline', 'Вывести линию') : '', one && (one.type === 'mcb' || one.type === 'rcbo') ? it('comb1', 'Гребёнка вправо') : '', ids.length > 1 ? it('g-pack', 'Сдвинуть вплотную') : '', '<hr>', it('del', ids.length > 1 ? 'Удалить выделенные' : 'Удалить', 'Del')].join('');
     if (kind === 'wire') { const w = findSel(); const st = w ? K().styleOf(E.P, w) : ''; const m = (v) => (st === v ? '● ' : ''); return [it('style-duct', m('duct') + 'По кабель-каналам'), it('style-loop', m('loop') + 'Петлёй напрямую'), it('style-line', m('line') + 'Прямой линией'), '<hr>', it('reroute', 'Сбросить трассу'), it('del', 'Удалить провод', 'Del')].join(''); }
-    if (kind === 'bus' || kind === 'line' || kind === 'comb') return it('del', 'Удалить', 'Del');
+    if (kind === 'bus' || kind === 'line' || kind === 'comb' || kind === 'note') return it('del', 'Удалить', 'Del');
     return [it('paste', 'Вставить', 'Ctrl+V', !E.clip), '<hr>', it('stops', 'Ограничители по краям реек'), it('wn-renum', 'Перенумеровать провода'), it('tab-journal', 'Кабельный журнал'), it('tab-bom', 'Оборудование в щите'), it('check', 'Проверить щит')].join('');
   }
   const closeCtx = () => { const m = E.root && E.root.querySelector('.ed-ctx'); if (m) m.remove(); };
@@ -740,6 +857,7 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
       if (k === 'slack') { E.P.slack = Math.max(0, Math.min(100, Number(val) || 0)); return ''; }
       if (k === 'wnStart') { E.P.wn = Object.assign(C.WN(E.P), { start: Math.max(0, Math.round(Number(val) || 0)) }); return ''; }
       if (k === 'wnShow' || k === 'wnColor' || k === 'wnAuto') { E.P.wn = Object.assign(C.WN(E.P), { [{ wnShow: 'show', wnColor: 'color', wnAuto: 'auto' }[k]]: !!val }); return ''; }
+      if (/^sheet:/.test(k)) { const v2 = C.VIEW(E.P); v2.sheet = Object.assign({}, v2.sheet || {}, { [k.slice(6)]: !!val }); E.P.view = v2; E.zoom = E.fit === 'all' ? -1 : E.zoom; return ''; }
       if (k === 'ferr' || k === 'stickers' || k === 'dims') { E.P.view = Object.assign(C.VIEW(E.P), { [k === 'ferr' ? 'ferrules' : k]: !!val }); return ''; }
       if (k === 'phases') { E.P.feed.phases = Number(val); E.P.wires = E.P.wires.filter((w) => !(w.a.feed && !C.feedCores(E.P).includes(w.a.feed)) && !(w.b.feed && !C.feedCores(E.P).includes(w.b.feed))); return ''; }
       if (k === 'earthing') { E.P.feed.earthing = val; E.P.wires = E.P.wires.filter((w) => !(w.a.feed && !C.feedCores(E.P).includes(w.a.feed)) && !(w.b.feed && !C.feedCores(E.P).includes(w.b.feed))); return ''; }
@@ -785,6 +903,7 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
       return '';
     }, true);
     if (g === 'cf' && o) return commit(() => { o[k] = val; return ''; }, true);
+    if (g === 'nf' && o) return commit(() => { o[k] = String(val).slice(0, 400); return ''; }, true);
     if (g === 'bf' && o) return commit(() => {
       if (k === 'id') { const nv = String(val).trim(); if (!nv) return 'Обозначение не может быть пустым.'; if (E.P.buses.some((b) => b.id === nv && b !== o)) return `Шина ${nv} уже есть.`; E.P.wires.forEach((w) => [w.a, w.b].forEach((x) => { if (x.bus === o.id) x.bus = nv; })); o.id = nv; E.sel.id = nv; return ''; }
       if (k === 'kind') { o.kind = val; return ''; }
@@ -814,6 +933,7 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
   /* строки таблиц для листов печати */
   function tableOf(kind) {
     const C = K(), P = E.P;
+    if (kind === 'pe') return { title: 'Перечень элементов', head: ['Поз. обозначение', 'Наименование', 'Кол.', 'Примечание'], w: [0.18, 0.56, 0.07, 0.19], rows: C.elements(P).map((r) => [r.pos, r.name, String(r.qty), r.note]) };
     if (kind === 'journal') return { title: 'Кабельный журнал', head: ['№', 'Откуда', 'Куда', 'Марка', 'мм²', 'Цвет', 'Длина, м'], w: [0.06, 0.2, 0.2, 0.2, 0.07, 0.17, 0.1], rows: C.journal(P).map((r) => [String(r.num), r.from, r.to, r.mark, String(r.mm2).replace('.', ','), r.color, S.fmt(r.len, 2)]) };
     return { title: 'Спецификация оборудования, изделий и материалов', head: ['№', 'Наименование', 'Артикул', 'Кол-во'], w: [0.06, 0.62, 0.18, 0.14], rows: C.bom(P).map((b, i) => [String(i + 1), b.name, b.art || '', `${S.fmt(b.qty, 1)} ${b.unit}`]) };
   }
@@ -840,7 +960,7 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
     tb += tx(rx + 2, tby + 21, (m.object || P.name).slice(0, 40), 3.2) + tx(rx + 2, tby + 26, '', 3);
     tb += tx(rx + 72, tby + 18.6, 'Стадия', 2.4) + tx(rx + 87, tby + 18.6, 'Лист', 2.4) + tx(rx + 102, tby + 18.6, 'Листов', 2.4);
     tb += tx(rx + 77.5, tby + 26.5, m.stage || 'Р', 3.4, { a: 'middle' }) + tx(rx + 92.5, tby + 26.5, String(m.sheet || 1), 3.4, { a: 'middle' }) + tx(rx + 110, tby + 26.5, String(m.sheets || 1), 3.4, { a: 'middle' });
-    tb += tx(rx + 35, tby + 36, kind === 'panel' ? 'Щит. Общий вид с монтажом' : kind === 'scheme' ? 'Схема однолинейная принципиальная' : kind === 'journal' ? 'Кабельный журнал' : 'Спецификация', 2.8, { a: 'middle' });
+    tb += tx(rx + 35, tby + 36, ({ panel: 'Щит. Общий вид с монтажом', scheme: 'Схема однолинейная принципиальная', journal: 'Кабельный журнал', pe: 'Перечень элементов', tags: 'Бирки на кабели', labels: 'Наклейки на щит, 1:1' })[kind] || 'Спецификация', 2.8, { a: 'middle' });
     tb += tx(rx + 35, tby + 49, P.name.slice(0, 44), 3, { a: 'middle', b: true }) + tx(rx + 85, tby + 49, (m.org || '').slice(0, 24), 3, { a: 'middle' });
     const frame = `<rect x="0" y="0" width="${SW}" height="${SH}" style="fill:#fff;stroke:#bbb;stroke-width:0.2"/><rect x="${ix}" y="${iy}" width="${iw}" height="${ih}" style="fill:none;stroke:#000;stroke-width:0.6"/>`;
     const area = { x: ix + 5, y: iy + 5, w: iw - 10, h: ih - tbH - 10 };
@@ -869,6 +989,34 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
       const s = schemeSVG();
       const mm = s.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
       if (mm) { const vw = +mm[1], vh = +mm[2], sc = Math.min(area.w / vw, area.h / vh); content = `<g transform="translate(${area.x} ${area.y}) scale(${sc})">${s.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</g>`; }
+    } else if (kind === 'tags') {
+      /* бирки на отходящие кабели: группа, назначение, кабель, длина, от какого аппарата */
+      const gr = K().groups(P), TW = 70, TH = 30, cols = Math.max(1, Math.floor((area.w + 4) / (TW + 4))), rowsN = Math.max(1, Math.floor((area.h - 8 + 4) / (TH + 4))), per = cols * rowsN, pg = page || 0;
+      content = tx(area.x, area.y + 5, 'Бирки на кабели: вырезать и надеть на кабель у щита', 4, { b: true });
+      gr.slice(pg * per, pg * per + per).forEach((g, i) => {
+        const x = area.x + (i % cols) * (TW + 4), y = area.y + 9 + Math.floor(i / cols) * (TH + 4);
+        content += `<rect x="${x}" y="${y}" width="${TW}" height="${TH}" rx="3" style="fill:#fff;stroke:#000;stroke-width:0.3"/><circle cx="${x + 5}" cy="${y + TH / 2}" r="1.8" style="fill:none;stroke:#000;stroke-width:0.3"/>`;
+        content += tx(x + 10, y + 8, `Гр. ${g.l.num}`, 5.5, { b: true }) + tx(x + TW - 3, y + 8, g.prot ? g.prot.id : '', 4, { a: 'end', b: true });
+        content += tx(x + 10, y + 14.5, String(g.l.name).slice(0, 30), 3.4) + tx(x + 10, y + 20.5, String(g.l.cable || '').slice(0, 32), 3) + tx(x + 10, y + 26, (g.l.len ? `${g.l.len} м · ` : '') + String(P.name).slice(0, 26), 2.6);
+      });
+    } else if (kind === 'labels') {
+      /* наклейки на щит в масштабе 1:1: полоска на рейку, клетка на аппарат — обозначение и назначение */
+      const M = K().G.MOD, CH = 12;
+      content = tx(area.x, area.y + 5, 'Наклейки на щит в масштабе 1:1 — печатать без масштабирования, вырезать по рамке', 4, { b: true });
+      let y = area.y + 10;
+      for (let row = 0; row < P.rows; row++) {
+        content += tx(area.x, y + 7.5, String(row + 1), 3.4, { b: true });
+        let x = area.x + 6;
+        P.devs.filter((d) => d.row === row && d.type !== 'stop').sort((a, b) => a.x - b.x).forEach((d) => {
+          const w = d.w * M;
+          if (x + w > area.x + area.w) { x = area.x + 6; y += CH + 3; }
+          const n1 = Math.floor(w / 1.9), lab = String(d.label || '');
+          content += `<rect x="${x}" y="${y}" width="${w}" height="${CH}" style="fill:#fff;stroke:#000;stroke-width:0.25"/>` + tx(x + w / 2, y + 4.4, d.id, 3.2, { a: 'middle', b: true }) + tx(x + w / 2, y + 8.4, lab.length > n1 ? lab.slice(0, n1 - 1) + '…' : lab, 2.6, { a: 'middle' });
+          x += w;
+        });
+        y += CH + 6;
+        if (y > area.y + area.h - CH) break;
+      }
     } else {
       const T = tableOf(kind), n = perPage(fmt), pg = page || 0;
       const rows = T.rows.slice(pg * n, pg * n + n);
@@ -886,7 +1034,8 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
   }
   async function printSheets(fmt, kinds) {
     const list = [];
-    kinds.forEach((k) => { const n = k === 'bom' || k === 'journal' ? Math.max(1, Math.ceil(tableOf(k).rows.length / perPage(fmt))) : 1; for (let pg = 0; pg < n; pg++) list.push([k, pg]); });
+    const tagsPer = () => Math.max(1, Math.floor(((fmt === 'A4' ? 297 : 420) - 35 + 4) / 74)) * Math.max(1, Math.floor(((fmt === 'A4' ? 210 : 297) - 75 - 4) / 34));
+    kinds.forEach((k) => { const n = k === 'bom' || k === 'journal' || k === 'pe' ? Math.max(1, Math.ceil(tableOf(k).rows.length / perPage(fmt))) : k === 'tags' ? Math.max(1, Math.ceil(K().groups(E.P).length / tagsPer())) : 1; for (let pg = 0; pg < n; pg++) list.push([k, pg]); });
     const sheets = list.map(([k, pg], i) => { E.P.meta.sheet = i + 1; E.P.meta.sheets = list.length; return sheetSVG(k, fmt, pg); });
     const [SW, SH] = fmt === 'A4' ? [297, 210] : [420, 297];
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(E.P.name)}</title><style>@page{size:${fmt} landscape;margin:0}body{margin:0}svg{display:block;width:${SW}mm;height:${SH}mm;page-break-after:always}</style></head><body>${sheets.join('')}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`;
@@ -899,7 +1048,7 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
 
   E.sheetSVG = sheetSVG;
   E.schemeSVG = schemeSVG;
-  E.api = { copySel, paste, ctxHTML, endAt, moveWireEnd, setSel, moveGroup, packGroup, setProp, addDevice, moveDev, moveBus, delSel, wireClick, makeComb, commit, undo, redo };
+  E.api = { ribbonHTML, sheetExtras, copySel, paste, ctxHTML, endAt, moveWireEnd, setSel, moveGroup, packGroup, setProp, addDevice, moveDev, moveBus, delSel, wireClick, makeComb, commit, undo, redo };
 
   /* ---------- экран ---------- */
   S.view('editor', {
@@ -907,28 +1056,13 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
     render() {
       load(); css();
       return `<div class="wrap ed-wrap">
-<div class="ed-top">
-<input class="inp" data-name value="${esc(E.P.name)}" aria-label="Название щита">
-<div class="ed-menu"><button class="btn sm" type="button" data-act="menu" aria-haspopup="true">${S.icon('panel')}Щит ▾</button><div class="ed-drop" data-drop>
-<button type="button" data-act="new">${S.icon('plus')}Новый щит</button>
-<button type="button" data-act="from-builder">${S.icon('panel')}Взять из конструктора</button>
-<button type="button" data-act="open">${S.icon('doc')}Мои щиты</button>
-<hr><button type="button" data-act="export">${S.icon('download')}Скачать файл щита</button>
-<button type="button" data-act="import">${S.icon('upload')}Открыть файл щита</button>
-</div></div>
-<button class="btn sm" type="button" data-act="save-as" title="Сохранить в «Мои щиты»">${S.icon('save')}Сохранить</button>
-<span class="sep"></span>
-<button class="btn sm" type="button" data-act="undo" title="Отменить (Ctrl+Z)">↶</button><button class="btn sm" type="button" data-act="redo" title="Вернуть (Ctrl+Y)">↷</button>
-<button class="btn sm" type="button" data-tool="select" aria-pressed="${E.tool === 'select'}">Выбор</button><button class="btn sm" type="button" data-tool="wire" aria-pressed="${E.tool === 'wire'}">${S.icon('cable')}Провод</button><button class="btn sm" type="button" data-tool="erase" aria-pressed="${E.tool === 'erase'}" title="Ластик: нажми на аппарат, провод, шину или линию — удалится">${S.icon('trash')}Ластик</button>
-<button class="btn sm" type="button" data-act="zoom-out" title="Мельче">−</button><button class="btn sm" type="button" data-act="zoom-fit" title="Весь щит / по ширине окна">⤢</button><button class="btn sm" type="button" data-act="zoom-in" title="Крупнее">+</button>
-<span class="sep"></span>
-<button class="btn sm" type="button" data-act="check">${S.icon('shield')}Проверить</button>
-<button class="btn sm primary" type="button" data-act="print">${S.icon('doc')}Печать и PDF</button>
-<button class="btn sm" type="button" data-act="full" aria-pressed="false" title="Скрыть меню слева и дать щиту больше места">⛶</button>
+<div class="ed-rib">
+<div class="ed-rib-tabs"><input class="inp" data-name value="${esc(E.P.name)}" aria-label="Название щита">${RTABS.map(([k, l]) => `<button type="button" data-rtab="${k}" aria-selected="${(E.rtab || 'home') === k}">${l}</button>`).join('')}<span class="sp"></span><button type="button" class="ed-rb sm" data-act="full" aria-pressed="false" title="Весь экран: только щит, как в Visio (Esc — выход)">⛶ Весь экран</button></div>
+<div class="ed-rib-body" data-ribbon>${ribbonHTML()}</div>
 </div>
 <div class="ed-main">
 <aside class="ed-side" data-lib>${libHTML()}</aside>
-<section class="ed-center"><div class="ed-tabs" role="tablist">${[['panel', 'Вид щита'], ['scheme', 'Однолинейная схема'], ['groups', 'Группы'], ['bom', 'Спецификация'], ['journal', 'Кабельный журнал'], ['checks', 'Проверки']].map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${E.tab === k}">${l}</button>`).join('')}</div><div data-pane style="flex:1;display:flex;flex-direction:column;min-height:420px">${tabHTML()}</div></section>
+<section class="ed-center"><div class="ed-tabs" role="tablist">${[['panel', 'Вид щита'], ['scheme', 'Однолинейная схема'], ['groups', 'Группы'], ['bom', 'Спецификация'], ['pe', 'Перечень элементов'], ['journal', 'Кабельный журнал'], ['checks', 'Проверки']].map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${E.tab === k}">${l}</button>`).join('')}</div><div data-pane style="flex:1;display:flex;flex-direction:column;min-height:420px">${tabHTML()}</div></section>
 <aside class="ed-side ed-props" data-props>${propsHTML()}</aside>
 </div>
 <input type="file" accept=".json,application/json" data-file hidden><input type="file" accept=".json,application/json" data-libfile hidden>
@@ -939,12 +1073,11 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
       E.drag = null; E.view = null; E.ghost = null; E.busGhost = null;
       let full = false;
       try { full = localStorage.getItem('shk:ed:full') === '1'; } catch (er) { full = false; }
-      document.body.classList.toggle('ed-full', full);
-      const fbtn = root.querySelector('[data-act="full"]');
-      if (fbtn) fbtn.setAttribute('aria-pressed', String(full));
+      setFull(full);
       if (!S.edHooks) {
         S.edHooks = true;
         window.addEventListener('hashchange', () => { if (!/^#editor/.test(location.hash)) document.body.classList.remove('ed-full'); });
+        document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('ed-full') && E.root && document.body.contains(E.root)) setFull(false); });
         document.addEventListener('click', (e) => { const d = E.root && E.root.querySelector('[data-drop].open'); if (d && !e.target.closest('.ed-menu')) d.classList.remove('open'); });
       }
       load();
@@ -959,7 +1092,7 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
       root.addEventListener('change', (e) => {
         const el = e.target;
         const val = el.type === 'checkbox' ? el.checked : el.type === 'number' ? (el.value === '' ? '' : Number(el.value)) : el.value;
-        const g = ['pf', 'mf', 'df', 'wf', 'bf', 'lf', 'cf'].find((x) => el.dataset[x]);
+        const g = ['pf', 'mf', 'df', 'wf', 'bf', 'lf', 'cf', 'nf'].find((x) => el.dataset[x]);
         if (g) setProp(g, el.dataset[g], val);
         if (el.matches('[data-file]') && el.files[0]) {
           const f = el.files[0]; el.value = '';
@@ -986,6 +1119,18 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
           if (x) commit(() => { E.P = norm(clone(x.P)); E.sel = null; E.zoom = 0; return ''; }, false, true);
           return;
         }
+        const mydel = e.target.closest('[data-mydel]'), myed = e.target.closest('[data-myedit]');
+        if (mydel || myed) {
+          const id = (mydel || myed).dataset[mydel ? 'mydel' : 'myedit'];
+          if (myed) { E.myForm = true; E.myEdit = id; E.newForm = false; E.sel = null; refresh('props'); return; }
+          const mine = LB().loadMine(), item = mine.find((x) => x.id === id);
+          if (!item) return;
+          LB().saveMine(mine.filter((x) => x.id !== id));
+          refresh('lib');
+          const used = E.P.devs.filter((d) => d.sid === id).length;
+          S.toast && S.toast(`«${item.series}» удалён из библиотеки${used ? `; на щите остались ${used} шт. — их можно удалить отдельно` : ''}`, { label: 'Вернуть', run: () => { const m2 = LB().loadMine(); if (!m2.some((x) => x.id === id)) { m2.push(item); LB().saveMine(m2); } refresh('lib'); } });
+          return;
+        }
         const b = e.target.closest('button');
         const drop = root.querySelector('[data-drop]');
         if (drop && !(b && b.dataset.act === 'menu')) drop.classList.remove('open');
@@ -993,8 +1138,9 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
         if (!b) return;
         const C = K();
         if (b.dataset.brand) { E.brand = b.dataset.brand; refresh('lib'); return; }
+        if (b.dataset.rtab) { E.rtab = b.dataset.rtab; root.querySelectorAll('[data-rtab]').forEach((x) => x.setAttribute('aria-selected', String(x === b))); root.querySelector('[data-ribbon]').innerHTML = ribbonHTML(); return; }
         if (b.dataset.tab) { E.tab = b.dataset.tab; E.wireStart = null; root.querySelectorAll('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b))); root.querySelector('[data-pane]').innerHTML = tabHTML(); if (E.tab === 'panel') drawCanvas(); return; }
-        if (b.dataset.tool) { E.tool = b.dataset.tool; E.wireStart = null; root.querySelectorAll('[data-tool]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); drawCanvas(); return; }
+        if (b.dataset.tool) { E.tool = b.dataset.tool; E.wireStart = null; if (E.tool !== 'ruler') { E.ruler = null; E.hover = null; } root.querySelectorAll('[data-tool]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); drawCanvas(); return; }
         if (b.dataset.move) { const d = findSel(); if (d) moveDev(d, b.dataset.move); return; }
         if (b.dataset.gmove) { moveGroup(selIds(), b.dataset.gmove); return; }
         if (b.dataset.rail) { const op = b.dataset.rail, k = Number(b.dataset.k); commit(() => C.railOp(P(), op, k), true); if (op !== 'swap') { E.zoom = E.fit === 'all' ? -1 : 0; drawCanvas(); } return; }
@@ -1015,11 +1161,19 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
           return;
         }
         if (act === 'wn-renum') { commit(() => { C.numberWires(P(), true); return ''; }, true); flash(`Провода перенумерованы с ${C.WN(P()).start} сверху вниз и слева направо.`, 'note'); if (E.tab === 'journal') goTab('journal'); return; }
-        if (act === 'tab-journal') { goTab('journal'); return; }
-        if (act === 'tab-bom') { goTab('bom'); return; }
+        if (/^tab-/.test(act)) { goTab(act.slice(4)); return; }
+        if (act === 'csv-pe') { S.saveFile(fname('перечень элементов'), csv(['Поз. обозначение', 'Наименование', 'Кол.', 'Примечание'], C.elements(P()).map((r) => [r.pos, r.name, r.qty, r.note])), 'text/csv;charset=utf-8'); return; }
+        if (act === 'print-tags') { if (!P().lines.length) { flash('Линий нет — бирки печатать не на что.'); return; } printSheets('A4', ['tags']); return; }
+        if (act === 'print-labels') { printSheets('A3', ['labels']); return; }
         if (act === 'csv-bom') { S.saveFile(fname('спецификация'), csv(['№', 'Наименование', 'Артикул', 'Количество', 'Ед.'], C.bom(P()).map((b, i) => [i + 1, b.name, b.art || '', S.fmt(b.qty, 1), b.unit])), 'text/csv;charset=utf-8'); return; }
         if (act === 'csv-journal') { S.saveFile(fname('кабельный журнал'), csv(['№ провода', 'Откуда', 'Куда', 'Марка', 'Сечение, мм²', 'Цвет', 'Длина, м'], C.journal(P()).map((r) => [r.num, r.from, r.to, r.mark, String(r.mm2).replace('.', ','), r.color, S.fmt(r.len, 2)])), 'text/csv;charset=utf-8'); return; }
-        if (act === 'full') { const on = document.body.classList.toggle('ed-full'); b.setAttribute('aria-pressed', String(on)); try { localStorage.setItem('shk:ed:full', on ? '1' : ''); } catch (er) { /* без памяти */ } if (E.fit !== 'all') E.zoom = 0; else E.zoom = -1; drawCanvas(); return; }
+        if (act === 'full') {
+          const on = !document.body.classList.contains('ed-full');
+          setFull(on);
+          try { if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (er) { /* окно браузера не дало */ }
+          return;
+        }
+        if (act === 'full-old') { const on = document.body.classList.toggle('ed-full'); b.setAttribute('aria-pressed', String(on)); try { localStorage.setItem('shk:ed:full', on ? '1' : ''); } catch (er) { /* без памяти */ } if (E.fit !== 'all') E.zoom = 0; else E.zoom = -1; drawCanvas(); return; }
         if (act === 'undo') undo();
         else if (act === 'redo') redo();
         else if (act === 'zoom-in') { E.zoom = Math.min(8, (E.zoom || 1) * 1.25); drawCanvas(); }
@@ -1088,7 +1242,7 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
         else if (act === 'print') {
           E.sel = null; E.myForm = false; E.newForm = false;
           root.querySelector('[data-props]').innerHTML = `<h3>Печать и PDF</h3><label>Формат листа</label><select data-print-fmt><option>A3</option><option>A4</option></select>
-<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="panel" checked> Вид щита с монтажом</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="scheme" checked> Однолинейная схема</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="bom" checked> Спецификация</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="journal" checked> Кабельный журнал</label>
+<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="panel" checked> Вид щита с монтажом</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="scheme" checked> Однолинейная схема</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="bom" checked> Спецификация</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="pe"> Перечень элементов</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="journal" checked> Кабельный журнал</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="tags"> Бирки на кабели</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="labels"> Наклейки на щит (1:1)</label>
 <p class="small muted">Листы с рамкой и основной надписью. Данные штампа — в свойствах щита (нажми на пустое место холста). В окне печати выбери «Сохранить как PDF».</p><div class="row"><button class="btn sm primary" type="button" data-act="print-go">${S.icon('doc')}Печатать</button><button class="btn sm" type="button" data-act="print-svg">${S.icon('download')}Вид щита в SVG</button></div>`;
         } else if (act === 'print-go') {
           const fmt = root.querySelector('[data-print-fmt]').value;
@@ -1096,20 +1250,21 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
           if (!kinds.length) { flash('Выбери хотя бы один лист.'); return; }
           printSheets(fmt, kinds);
         } else if (act === 'print-svg') S.saveFile((P().name || 'shchit') + '.svg', sheetSVG('panel', root.querySelector('[data-print-fmt]').value), 'image/svg+xml');
-        else if (act === 'mydev') { E.myForm = true; E.newForm = false; E.sel = null; refresh('props'); }
-        else if (act === 'mydev-cancel') { E.myForm = false; refresh('props'); }
+        else if (act === 'mydev') { E.myForm = true; E.myEdit = null; E.newForm = false; E.sel = null; refresh('props'); }
+        else if (act === 'mydev-cancel') { E.myForm = false; E.myEdit = null; refresh('props'); }
         else if (act === 'mydev-save') {
           const g = (k) => root.querySelector(`[data-my="${k}"]`).value;
           const series = g('series').trim();
           if (!series) { flash('Укажи производителя и серию.'); return; }
           const In = g('In').split(/[,; ]+/).map(Number).filter((x) => x > 0).sort((a, c) => a - c);
-          const item = { id: 'my-' + Date.now().toString(36), brand: 'my', series, kind: g('kind'), poles: [Number(g('poles'))], w: Number(g('w')), h: Math.max(40, Math.min(150, Number(g('h')) || 85)), note: g('note') };
+          const item = { id: E.myEdit || 'my-' + Date.now().toString(36), brand: 'my', series, kind: g('kind'), poles: [Number(g('poles'))], w: Number(g('w')), h: Math.max(40, Math.min(150, Number(g('h')) || 85)), note: g('note') };
+          if (g('art').trim()) item.art = g('art').trim();
           if (In.length) item.In = In;
           if (item.kind === 'mcb' || item.kind === 'rcbo') item.curves = ['B', 'C', 'D'];
           if (item.kind === 'rcd' || item.kind === 'rcbo') { item.ma = [10, 30, 100, 300]; item.rt = ['AC', 'A']; }
-          const mine = LB().loadMine(); mine.push(item); LB().saveMine(mine);
-          E.myForm = false; E.brand = 'my'; refresh('lib'); refresh('props');
-          S.toast && S.toast('Аппарат добавлен в «Мои»');
+          const mine = LB().loadMine(); const at = mine.findIndex((x) => x.id === item.id); if (at >= 0) mine[at] = item; else mine.push(item); LB().saveMine(mine);
+          const was = E.myEdit; E.myForm = false; E.myEdit = null; E.brand = 'my'; refresh('lib'); refresh('props'); drawCanvas();
+          S.toast && S.toast(was ? 'Аппарат изменён' : 'Аппарат добавлен в «Мои»');
         } else if (act === 'mylib-export') S.saveFile('moi-apparaty.json', JSON.stringify(LB().loadMine(), null, 1), 'application/json');
         else if (act === 'mylib-import') root.querySelector('[data-libfile]').click();
       });
@@ -1144,6 +1299,22 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
         const C = K();
         if (dr.kind === 'band' && p) {
           E.band = { x: Math.min(p.x, dr.p0.x), y: Math.min(p.y, dr.p0.y), w: Math.abs(p.x - dr.p0.x), h: Math.abs(p.y - dr.p0.y) };
+          schedule();
+          return;
+        }
+        if (dr.kind === 'ruler' && p) {
+          const e1 = endAt(p), q1 = e1 && !e1.full ? C.endInfo(E.P, e1) : null, b = q1 ? { x: q1.x, y: q1.y } : p;
+          E.ruler = { x1: dr.p0.x, y1: dr.p0.y, x2: b.x, y2: b.y };
+          const L = Math.hypot(b.x - dr.p0.x, b.y - dr.p0.y);
+          E.hover = `Расстояние ${S.fmt(L, 1)} мм (по горизонтали ${S.fmt(Math.abs(b.x - dr.p0.x), 1)}, по вертикали ${S.fmt(Math.abs(b.y - dr.p0.y), 1)})${q1 ? ' · до клеммы' : ''}`;
+          schedule();
+          return;
+        }
+        if (dr.kind === 'note' && p) {
+          const n = (E.P.notes || []).find((x) => x.id === dr.id);
+          if (!n) return;
+          const dx = p.x - dr.p0.x, dy = p.y - dr.p0.y;
+          if (dr.mode === 'box') { n.x = dr.v0.x + dx; n.y = dr.v0.y + dy; } else { n.ax = dr.v0.ax + dx; n.ay = dr.v0.ay + dy; }
           schedule();
           return;
         }
@@ -1219,6 +1390,16 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
         E.view = null; E.ghost = null; E.busGhost = null; E.band = null;
         if (!dr) return;
         const C = K();
+        if (dr.kind === 'ruler') { if (!dr.moved) { E.ruler = null; E.hover = null; } drawCanvas(); return; }
+        if (dr.kind === 'note') {
+          const n = (E.P.notes || []).find((x) => x.id === dr.id);
+          if (!n) return;
+          if (!dr.moved) { E.sel = { kind: 'note', id: n.id }; E.myForm = false; E.newForm = false; refresh(); return; }
+          const v = { x: n.x, y: n.y, ax: n.ax, ay: n.ay };
+          Object.assign(n, dr.v0);
+          commit(() => { Object.assign(n, { x: Math.round(v.x * 10) / 10, y: Math.round(v.y * 10) / 10, ax: Math.round(v.ax * 10) / 10, ay: Math.round(v.ay * 10) / 10 }); E.sel = { kind: 'note', id: n.id }; return ''; }, true);
+          return;
+        }
         if (dr.kind === 'wend') {
           E.preview = null; E.hover = null;
           if (!dr.moved) { E.sel = { kind: 'wire', id: dr.id }; refresh(); return; }
@@ -1271,6 +1452,7 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
       root.addEventListener('pointerdown', (ev) => {
         if (ev.button !== 0 || E.drag) return;
         const card = ev.target.closest('.ed-card[data-sid]');
+        if (card && ev.target.closest('.ed-myb')) return;
         if (card) {
           const s = LB().byId(card.dataset.sid);
           if (!s) return;
@@ -1282,6 +1464,18 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
         if (!ev.target.closest('.ed-ctx')) closeCtx();
         const cv = ev.target.closest('[data-canvas]');
         if (!cv || !ev.target.closest('svg')) return;
+        if (E.tool === 'ruler') { ev.preventDefault(); const p0 = svgPt(ev), e0 = p0 && endAt(p0), q0 = e0 && !e0.full ? K().endInfo(E.P, e0) : null; startDrag({ kind: 'ruler', p0: q0 ? { x: q0.x, y: q0.y } : p0, light: true }, ev); return; }
+        const nt = ev.target.closest('[data-note],[data-nanchor]');
+        if (nt) { ev.preventDefault(); const id = nt.dataset.note || nt.dataset.nanchor; const n = (E.P.notes || []).find((x) => x.id === id); if (!n) return; startDrag({ kind: 'note', id, mode: nt.dataset.note ? 'box' : 'anchor', p0: svgPt(ev), v0: { x: n.x, y: n.y, ax: n.ax, ay: n.ay } }, ev); E.drag.light = false; return; }
+        if (E.tool === 'note') {
+          ev.preventDefault();
+          const p0 = svgPt(ev);
+          if (!p0) return;
+          commit(() => { E.P.notes = E.P.notes || []; const n = { id: uid('n'), ax: Math.round(p0.x * 10) / 10, ay: Math.round(p0.y * 10) / 10, x: Math.round(p0.x + 16), y: Math.round(p0.y - 30), text: 'Выноска: напиши текст справа' }; E.P.notes.push(n); E.sel = { kind: 'note', id: n.id }; return ''; });
+          E.tool = 'select'; root.querySelectorAll('[data-tool]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.tool === 'select')));
+          const ta = root.querySelector('[data-nf="text"]'); if (ta) { ta.focus(); ta.select(); }
+          return;
+        }
         if (E.tool === 'erase') {
           ev.preventDefault();
           const hit = hitAt(ev.target);
@@ -1358,6 +1552,8 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
         if (q('[data-tbus]')) return { kind: 'bus', id: q('[data-tbus]').dataset.tbus };
         if (q('[data-comb]')) return { kind: 'comb', id: q('[data-comb]').dataset.comb };
         if (q('[data-lineg]')) return { kind: 'line', id: q('[data-lineg]').dataset.lineg };
+        if (q('[data-note]')) return { kind: 'note', id: q('[data-note]').dataset.note };
+        if (q('[data-nanchor]')) return { kind: 'note', id: q('[data-nanchor]').dataset.nanchor };
         if (q('[data-line]')) return { kind: 'line', id: q('[data-line]').dataset.line };
         return { kind: 'empty' };
       };
