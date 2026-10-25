@@ -24,7 +24,17 @@
     if (E.P) return;
     try { E.P = JSON.parse(localStorage.getItem(LS) || 'null'); } catch (e) { E.P = null; }
     if (!E.P || !E.P.devs) E.P = starter();
-    if (!E.P.pitch) E.P.pitch = 134;
+    norm(E.P);
+  }
+  /* старые щиты получают новые поля: маркировка проводов, вид, запас; провода без номера — номер по порядку */
+  function norm(P) {
+    P.pitch = P.pitch || 134;
+    if (!P.wn) P.wn = { show: true, color: true, start: 1, auto: true };
+    if (!P.view) P.view = { ferrules: true, stickers: false, dims: false };
+    if (P.slack == null) P.slack = 20;
+    if (!P.wireStyle) P.wireStyle = 'duct';
+    K().numberWires(P, false);
+    return P;
   }
   function save() { try { localStorage.setItem(LS, JSON.stringify(E.P)); } catch (e) { /* память браузера заполнена */ } }
   /* изменение с записью в историю; fn может вернуть строку — тогда изменение отменяется и показывается сообщение */
@@ -121,6 +131,16 @@
 .ed-props .ed-kv span{color:var(--fg-muted)}
 .ed-props .g2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .ed-rails{margin-top:8px;display:grid;gap:3px}
+.ed-rail.ed-pitch span{color:var(--fg-subtle);padding-left:10px}
+.ed-rail select{width:auto;font-size:12px;padding:1px 4px}
+.ed-chk{display:flex!important;gap:6px;align-items:center;color:var(--fg)!important;font-size:13px!important;margin:6px 0 0!important}
+.ed-ctx{position:fixed;z-index:60;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-md);padding:4px;min-width:230px}
+.ed-ctx button{display:flex;width:100%;gap:8px;align-items:center;justify-content:space-between;border:0;background:none;padding:7px 10px;font-size:13.5px;text-align:left;cursor:pointer;border-radius:4px;color:var(--fg)}
+.ed-ctx button:hover{background:var(--bg-muted)}
+.ed-ctx button[disabled]{opacity:.45;cursor:default}
+.ed-ctx .k{color:var(--fg-subtle);font-size:12px}
+.ed-ctx hr{border:0;border-top:1px solid var(--border-muted);margin:4px 0}
+.ed-canvas.erase,.ed-canvas.erase *{cursor:not-allowed!important}
 .ed-rail{display:flex;gap:4px;align-items:center;font-size:12.5px}
 .ed-rail span{flex:1;color:var(--fg-muted)}
 .ed-rail button{border:1px solid var(--btn-border);background:var(--bg);border-radius:4px;padding:1px 7px;font-size:12px;cursor:pointer;color:var(--fg)}
@@ -166,7 +186,11 @@ ${kinds.map((k) => `<div class="ed-kind">${esc(L.KIND[k])}</div>${list.filter((s
 
   /* ---------- свойства ---------- */
   const opt = (arr, cur, fmt) => arr.map((v) => `<option value="${esc(v)}"${String(v) === String(cur) ? ' selected' : ''}>${esc(fmt ? fmt(v) : v)}</option>`).join('');
-  const keysHelp = `<div class="ed-keys"><span class="kbd">←</span> <span class="kbd">→</span> сдвинуть на полмодуля · <span class="kbd">↑</span> <span class="kbd">↓</span> на другую рейку · <span class="kbd">Del</span> удалить · <span class="kbd">Ctrl+D</span> копия · <span class="kbd">Ctrl+Z</span> / <span class="kbd">Ctrl+Y</span> отмена и возврат · <span class="kbd">Esc</span> отменить провод или снять выделение · <span class="kbd">Shift</span>+клик и рамка — несколько аппаратов · <span class="kbd">Ctrl+A</span> все · <span class="kbd">Ctrl</span>+колесо — масштаб</div>`;
+  const STYLE = { duct: 'по кабель-каналам', loop: 'петлёй напрямую', line: 'прямой линией' };
+  const RPITCH = [125, 134, 150, 175, 200];
+  /* таблица в CSV для Excel: точка с запятой и метка UTF-8, чтобы русские буквы открылись правильно */
+  const csv = (head, rows) => '\ufeff' + [head].concat(rows).map((r) => r.map((c) => `"${String(c == null ? '' : c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  const keysHelp = `<div class="ed-keys"><span class="kbd">←</span> <span class="kbd">→</span> сдвинуть на полмодуля · <span class="kbd">↑</span> <span class="kbd">↓</span> на другую рейку · <span class="kbd">Del</span> удалить · <span class="kbd">Ctrl+D</span> копия · <span class="kbd">Ctrl+Z</span> / <span class="kbd">Ctrl+Y</span> отмена и возврат · <span class="kbd">Esc</span> отменить провод или снять выделение · <span class="kbd">Shift</span>+клик и рамка — несколько аппаратов · <span class="kbd">Ctrl+A</span> все · <span class="kbd">Ctrl+C</span> <span class="kbd">Ctrl+X</span> <span class="kbd">Ctrl+V</span> копировать, вырезать, вставить · правая кнопка — меню · <span class="kbd">Ctrl</span>+колесо — масштаб</div>`;
   function propsHTML() {
     const P = E.P, L = LB(), C = K();
     if (E.myForm) return myFormHTML();
@@ -179,8 +203,20 @@ ${kinds.map((k) => `<div class="ed-kind">${esc(L.KIND[k])}</div>${list.filter((s
 <h4>Корпус и рейки</h4>
 <label>Готовый размер</label><select data-pf="preset"><option value="">${preset ? '' : 'свой размер'}</option>${C.PRESETS.map(([r, m]) => `<option value="${r}x${m}"${preset && preset[0] === r && preset[1] === m ? ' selected' : ''}>${r} × ${m} = ${r * m} модулей</option>`).join('')}</select>
 <div class="g2"><div><label>Реек</label><select data-pf="rows">${opt([1, 2, 3, 4, 5, 6, 7, 8], P.rows)}</select></div><div><label>Модулей на рейке</label><select data-pf="mods">${opt([6, 8, 12, 14, 16, 18, 24, 36], P.mods)}</select></div></div>
-<div class="ed-rails">${[...Array(P.rows).keys()].map((k) => { const used = P.devs.filter((d) => d.row === k).reduce((a, d) => a + d.w, 0); return `<div class="ed-rail"><span>Рейка ${k + 1} · занято ${S.fmt(used, 1)} из ${P.mods}</span><button type="button" data-rail="insert" data-k="${k}" title="Вставить пустую рейку над этой">+ выше</button>${k + 1 < P.rows ? `<button type="button" data-rail="swap" data-k="${k}" title="Поменять местами с рейкой ниже">⇅</button>` : ''}${used ? '' : `<button type="button" data-rail="remove" data-k="${k}" title="Убрать пустую рейку">×</button>`}</div>`; }).join('')}</div>
-<label>Шаг между рейками</label><select data-pf="pitch">${opt(C.PITCHES, P.pitch || 134, (v) => `${v} мм${v === 134 ? ' (по умолчанию)' : ''}`)}</select>
+<div class="ed-rails">${[...Array(P.rows).keys()].map((k) => { const used = P.devs.filter((d) => d.row === k).reduce((a, d) => a + d.w, 0); return `${k ? `<div class="ed-rail ed-pitch"><span>↕ между ${k} и ${k + 1}</span><select data-pf="rp${k - 1}" title="Расстояние между осями реек, мм">${opt(RPITCH, C.pitchOf(P, k - 1), (v) => `${v} мм`)}</select></div>` : ''}<div class="ed-rail"><span>Рейка ${k + 1} · занято ${S.fmt(used, 1)} из ${P.mods}</span><button type="button" data-rail="insert" data-k="${k}" title="Вставить пустую рейку над этой">+ выше</button>${k + 1 < P.rows ? `<button type="button" data-rail="swap" data-k="${k}" title="Поменять местами с рейкой ниже">⇅</button>` : ''}${used ? '' : `<button type="button" data-rail="remove" data-k="${k}" title="Убрать пустую рейку">×</button>`}</div>`; }).join('')}</div>
+<label>Шаг реек для всех (сверху и снизу — до шин)</label><select data-pf="pitch">${opt(RPITCH, P.pitch || 134, (v) => `${v} мм${v === 134 ? ' (по умолчанию)' : ''}`)}</select>
+<div class="row"><button class="btn sm" type="button" data-act="stops">Ограничители по краям реек</button></div>
+<h4>Провода</h4>
+<label>Как прокладывать</label><select data-pf="wireStyle">${opt(['duct', 'loop', 'line'], P.wireStyle || 'duct', (v) => STYLE[v])}</select>
+<div class="g2"><div><label>Запас длины, %</label><input class="inp" type="number" min="0" max="100" step="5" data-pf="slack" value="${P.slack == null ? 20 : P.slack}"></div><div><label>Номера с</label><input class="inp" type="number" min="0" step="1" data-pf="wnStart" value="${C.WN(P).start}"></div></div>
+<label class="ed-chk"><input type="checkbox" data-pf="wnShow"${C.WN(P).show ? ' checked' : ''}> Номера на проводах (маркировка)</label>
+<label class="ed-chk"><input type="checkbox" data-pf="wnColor"${C.WN(P).color ? ' checked' : ''}> Цветные кольца по цифрам</label>
+<label class="ed-chk"><input type="checkbox" data-pf="wnAuto"${C.WN(P).auto ? ' checked' : ''}> Новым проводам — номер сам</label>
+<label class="ed-chk"><input type="checkbox" data-pf="ferr"${C.VIEW(P).ferrules ? ' checked' : ''}> Наконечники НШВИ на рисунке</label>
+<div class="row"><button class="btn sm" type="button" data-act="wn-renum">Перенумеровать провода</button><button class="btn sm" type="button" data-act="tab-journal">Кабельный журнал</button></div>
+<h4>Вид</h4>
+<label class="ed-chk"><input type="checkbox" data-pf="stickers"${C.VIEW(P).stickers ? ' checked' : ''}> Наклейки с обозначениями (QF1, QD1…)</label>
+<label class="ed-chk"><input type="checkbox" data-pf="dims"${C.VIEW(P).dims ? ' checked' : ''}> Размеры: длина реек, шаг, высота</label>
 <h4>Ввод</h4>
 <label>Питание</label><select data-pf="phases">${opt([1, 3], P.feed.phases, (v) => (v === 1 ? 'Однофазный 230 В' : 'Трёхфазный 400 В'))}</select>
 <label>Система заземления</label><select data-pf="earthing">${opt(['TN-C-S', 'TN-S', 'TN-C>S', 'TT'], P.feed.earthing, (v) => ({ 'TN-C-S': 'TN-C-S: N и PE приходят раздельно', 'TN-S': 'TN-S', 'TN-C>S': 'PEN делится в этом щите', TT: 'TT: свой заземлитель' }[v]))}</select>
@@ -213,8 +249,9 @@ ${keysHelp}`;
       const canLine = ['mcb', 'rcbo', 'sw', 'km'].includes(d.type);
       const one = d.poles === 1 && (d.type === 'mcb' || d.type === 'rcbo');
       return `<h3>${esc(d.id)} — ${esc(L.KIND[s.kind] || d.type)}</h3>
-<div class="g2"><div><label>Обозначение</label><input class="inp" data-df="id" value="${esc(d.id)}"></div><div><label>Рейка, место</label><div class="ed-kv">${d.row + 1}, с ${S.fmt(d.x + 1, 1)}-го мод.</div></div></div>
+<div class="g2"><div><label>Обозначение</label><input class="inp" data-df="id" value="${esc(d.id)}"></div><div><label>Рейка, место</label><div class="ed-kv">${d.row + 1}, с ${S.fmt(d.x + 1, 1)}-го мод. (${S.fmt(d.x * C.G.MOD, 1)} мм от края)</div></div></div>
 <label>Назначение</label><input class="inp" data-df="label" value="${esc(d.label || '')}" placeholder="Розетки кухни">
+<label>Артикул (для спецификации)</label><input class="inp" data-df="art" value="${esc(d.art || '')}" placeholder="с упаковки или из каталога">
 <label>Серия</label><select data-df="sid">${same.map((x) => `<option value="${esc(x.id)}"${x.id === d.sid ? ' selected' : ''}>${esc(x.brand === 'gen' || x.brand === 'my' ? x.series : (L.BRANDS[x.brand] || {}).name + ' ' + x.series)}</option>`).join('')}</select>
 ${s.poles && s.poles.length > 1 ? `<label>Полюсов</label><select data-df="poles">${opt(s.poles, d.poles)}</select>` : ''}
 ${s.In ? `<label>Номинальный ток, А</label><select data-df="In">${opt(s.In, d.In)}</select>` : ''}
@@ -233,10 +270,14 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
       return `<h3>Провод</h3><div class="ed-kv">${esc(nm(w.a))} → ${esc(nm(w.b))}</div>
 <label>Проводник</label><select data-wf="cond">${opt(['L', 'L1', 'L2', 'L3', 'N', 'PE', 'PEN'], w.cond, (v) => ({ L: 'L — фаза (коричневый)', L1: 'L1 (коричневый)', L2: 'L2 (чёрный)', L3: 'L3 (серый)', N: 'N — нуль (синий)', PE: 'PE (жёлто-зелёный)', PEN: 'PEN' }[v]))}</select>
 <label>Сечение, мм²</label><select data-wf="mm2">${opt(C.SECTIONS, w.mm2, (v) => String(v).replace('.', ','))}</select>
-<label>Боковой канал</label><select data-wf="side">${opt(['', 'L', 'R'], w.side || '', (v) => ({ '': 'ближний (авто)', L: 'левый', R: 'правый' }[v]))}</select>
-<div class="ed-kv"><span>Длина по трассе:</span> ${pts ? S.fmt(C.pathLen(pts) / 1000 + 0.1, 2) : '—'} м с запасом на разделку</div>
-<div class="ed-kv"><span>Наконечник НШВИ:</span> ${String(w.mm2).replace('.', ',')} мм², цвет по DIN 46228-4</div>
-<p class="small muted">Потяни горизонтальный участок вверх-вниз или вертикальный влево-вправо, чтобы сдвинуть провод в канале. Кружок на конце провода тяни на другую клемму — провод перекинется.</p>
+<div class="g2"><div><label>Номер провода</label><input class="inp" type="number" min="0" data-wf="num" value="${w.num == null ? '' : esc(String(w.num))}"></div><div><label>Запас, %</label><input class="inp" type="number" min="0" max="100" step="5" data-wf="slack" value="${w.slack == null ? '' : w.slack}" placeholder="${P.slack == null ? 20 : P.slack} (как в щите)"></div></div>
+<label>Марка провода</label><input class="inp" data-wf="mark" value="${esc(w.mark || '')}" placeholder="${esc(C.MARK)}">
+<label>Цвет изоляции</label><select data-wf="color">${opt([''].concat(Object.keys(C.WCOL)), w.color || '', (v) => (v ? C.WCOL[v][0] : 'по назначению проводника'))}</select>
+<label>Прокладка</label><select data-wf="style">${opt(['', 'duct', 'loop', 'line'], w.style || '', (v) => (v ? STYLE[v] : 'как во всём щите'))}</select>
+${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select data-wf="side">${opt(['', 'L', 'R'], w.side || '', (v) => ({ '': 'ближний (авто)', L: 'левый', R: 'правый' }[v]))}</select>` : ''}
+<div class="ed-kv"><span>Длина:</span> ${pts ? S.fmt(C.wireLen(P, w, i), 2) : '—'} м — трасса, 0,1 м на разделку и запас</div>
+<div class="ed-kv"><span>Наконечник:</span> ${C.usedAt(P, C.keyOf(w.a)) === 2 || C.usedAt(P, C.keyOf(w.b)) === 2 ? 'двойной НШВИ2 там, где в клемме два провода; ' : ''}НШВИ ${String(w.mm2).replace('.', ',')} мм², цвет по DIN 46228-4</div>
+<p class="small muted">${C.styleOf(P, w) === 'duct' ? 'Потяни горизонтальный участок вверх-вниз или вертикальный влево-вправо, чтобы сдвинуть провод в канале.' : C.styleOf(P, w) === 'loop' ? (pts && pts.bez ? 'Потяни петлю вверх или вниз — она станет больше или меньше.' : 'С рейки на рейку петля обходит аппараты сбоку; участки можно двигать мышью.') : 'Прямой провод рисуется кратчайшей линией.'} Кружок на конце провода тяни на другую клемму — провод перекинется. Номер провода стоит на обоих концах и в кабельном журнале.</p>
 <div class="row"><button class="btn sm" type="button" data-act="reroute">${S.icon('refresh')}Сбросить трассу</button><button class="btn sm" type="button" data-act="del">${S.icon('trash')}Удалить</button></div>`;
     }
     if (k === 'bus') {
@@ -263,6 +304,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
 <div class="row"><button class="btn sm" type="button" data-act="del">${S.icon('trash')}Удалить</button></div>`;
     }
     if (k === 'comb') return `<h3>Гребёнка</h3><div class="ed-kv"><span>Аппараты:</span> ${esc(o.devs.join(', '))}</div><div class="ed-kv"><span>Фазы:</span> ${esc(o.conds.join(', '))}</div>
+<label>Тип шины</label><select data-cf="kind">${opt(['PIN', 'FORK'], o.kind || 'PIN', (v) => (v === 'PIN' ? 'PIN — штырь' : 'FORK — вилка'))}</select>
 <div class="row"><button class="btn sm" type="button" data-act="comb-grow">Удлинить вправо</button><button class="btn sm" type="button" data-act="comb-shrink">Укоротить</button><button class="btn sm" type="button" data-act="del">${S.icon('trash')}Удалить</button></div>
 <p class="small muted">Гребёнку ставят на аппараты, стоящие вплотную на одной рейке: если аппарат убрать или раздвинуть соседей, гребёнка режется. Питание подают проводом в клемму любого аппарата на ней. Если у аппарата раздельный зажим для шины и для провода (смотри паспорт), штырь гребёнки идёт в своё гнездо, а проводов в зажим — не больше двух.</p>`;
     return '';
@@ -348,7 +390,11 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
       const gr = C.groups(P);
       return `<div class="ed-pane">${gr.length ? S.B.tbl(['№', 'Назначение', 'Защита', 'УЗО', 'Кабель', 'Длина, м'], gr.map((x) => [esc(String(x.l.num)), esc(x.l.name), x.prot ? esc(`${x.prot.id} ${x.prot.curve || ''}${x.prot.In || ''}${x.prot.ma ? ' ' + x.prot.ma + ' мА' : ''}`) : '<span style="color:var(--danger)">нет</span>', esc((x.chain.find((d) => d.type === 'rcd') || {}).id || (x.prot && x.prot.type === 'rcbo' ? 'в дифавтомате' : '—')), esc(x.l.cable || ''), esc(String(x.l.len || ''))])) : '<p class="muted">Линий пока нет.</p>'}<p class="small muted">Эту таблицу печатают и вклеивают на дверцу щитка (ГОСТ 32395-2020, п. 6.2.25).</p></div>`;
     }
-    if (E.tab === 'bom') return `<div class="ed-pane">${S.B.tbl(['Наименование', 'Кол-во'], C.bom(P).map((b) => [esc(b.name), `${S.fmt(b.qty, 1)} ${esc(b.unit)}`]))}<p class="small muted">Провод — по длине трасс плюс 20 %, наконечники — по числу концов плюс 20 %.</p></div>`;
+    if (E.tab === 'bom') return `<div class="ed-pane"><div class="row" style="margin-bottom:8px;display:flex;gap:6px"><button class="btn sm" type="button" data-act="csv-bom">${S.icon('download')}В Excel (CSV)</button></div>${S.B.tbl(['№', 'Наименование', 'Артикул', 'Кол-во'], C.bom(P).map((b, i) => [String(i + 1), esc(b.name), esc(b.art || ''), `${S.fmt(b.qty, 1)} ${esc(b.unit)}`]))}<p class="small muted">Провод — по длине трасс с запасом из свойств щита, наконечники — по числу концов плюс 20 %; два провода одного сечения в одной клемме — один двойной наконечник. Артикулы вписывай в свойствах аппарата — с упаковки или из каталога.</p></div>`;
+    if (E.tab === 'journal') {
+      const J = C.journal(P);
+      return `<div class="ed-pane"><div class="row" style="margin-bottom:8px;display:flex;gap:6px"><button class="btn sm" type="button" data-act="csv-journal">${S.icon('download')}В Excel (CSV)</button><button class="btn sm" type="button" data-act="wn-renum">Перенумеровать провода</button></div>${J.length ? S.B.tbl(['№', 'Откуда', 'Куда', 'Марка', 'Сечение, мм²', 'Цвет', 'Длина, м'], J.map((r) => [esc(String(r.num)), esc(r.from), esc(r.to), esc(r.mark), String(r.mm2).replace('.', ','), esc(r.color), S.fmt(r.len, 2)])) : '<p class="muted">Проводов пока нет.</p>'}<p class="small muted">Кабельный журнал — список всех проводов щита: номер на маркере провода, откуда и куда он идёт. По нему собирают щит и ищут провод при ремонте. Номер одинаковый на обоих концах провода.</p></div>`;
+    }
     if (E.tab === 'checks') {
       const ch = C.checks(P);
       return `<div class="ed-pane"><div class="stack-sm">${ch.map((c) => `<div class="check-row ${c.level}">${S.icon(c.level === 'ok' ? 'check' : c.level === 'warn' ? 'alert' : 'x')}<div>${esc(c.text)}${c.ref ? `<span class="ref">${esc(c.ref)}</span>` : ''}</div></div>`).join('')}</div><p class="small muted" style="margin-top:10px">Проверка не заменяет расчёт токов КЗ, селективности и проект: она ловит ошибки сборки — чужие нули, лишние провода в клемме, линии без защиты.</p></div>`;
@@ -405,6 +451,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
     if (svg) svg.outerHTML = html; else cv.insertAdjacentHTML('beforeend', html);
     status();
     cv.classList.toggle('dragging', !!(E.drag && E.drag.moved));
+    cv.classList.toggle('erase', E.tool === 'erase');
     cv.classList.remove('moving');
     if (!fast) E.drawMs = performance.now() - t0;
   }
@@ -431,7 +478,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
     if (!el) return;
     const dr = E.drag && E.drag.moved;
     const hov = E.wireStart || (E.drag && E.drag.kind === 'wend') ? E.hover : null;
-    const text = msg ? msg.text : hov || (dr ? (E.drag.kind === 'band' ? 'Отпусти — выделятся аппараты внутри рамки (с Shift — добавятся к выделенным)' : E.drag.kind === 'seg' ? 'Двигай провод в канале · отпусти, чтобы оставить' : E.ghost && !E.ghost.ok ? 'Сюда не помещается: на рейке не хватает места' : E.busGhost ? (E.busGhost.ok ? 'Отпусти, чтобы поставить шину' : 'Здесь шина наезжает на соседнюю') : E.ghost ? (E.ghost.snap ? 'Прилипнет вплотную к соседу · отпусти, чтобы поставить' : 'Отпусти, чтобы поставить · соседи раздвинутся сами') : 'Наведи на рейку') : E.wireStart ? 'Провод: нажми на вторую клемму, отверстие шины или жилу кабеля · Esc — отмена' : E.tool === 'wire' ? 'Режим проводов: нажми на клемму, с которой начать' : 'Перетащи аппарат из библиотеки на рейку или нажми на него · нажми на клемму, чтобы вести провод · Ctrl+колесо — масштаб');
+    const text = msg ? msg.text : hov || (dr ? (E.drag.kind === 'band' ? 'Отпусти — выделятся аппараты внутри рамки (с Shift — добавятся к выделенным)' : E.drag.kind === 'seg' ? 'Двигай провод в канале · отпусти, чтобы оставить' : E.ghost && !E.ghost.ok ? 'Сюда не помещается: на рейке не хватает места' : E.busGhost ? (E.busGhost.ok ? 'Отпусти, чтобы поставить шину' : 'Здесь шина наезжает на соседнюю') : E.ghost ? (E.ghost.snap ? 'Прилипнет вплотную к соседу · отпусти, чтобы поставить' : 'Отпусти, чтобы поставить · соседи раздвинутся сами') : 'Наведи на рейку') : E.wireStart ? 'Провод: нажми на вторую клемму, отверстие шины или жилу кабеля · Esc — отмена' : E.tool === 'erase' ? 'Ластик: нажми на аппарат, провод, шину, гребёнку или линию — удалится. Esc — обычный режим' : E.tool === 'wire' ? 'Режим проводов: нажми на клемму, с которой начать' : 'Перетащи аппарат из библиотеки на рейку или нажми на него · нажми на клемму, чтобы вести провод · Ctrl+колесо — масштаб');
     el.className = 'ed-status' + (msg ? ' ' + msg.kind : '');
     el.innerHTML = `<span>${esc(text)}</span><span class="z">${Math.round((E.zoom || 1) / 3.78 * 100)} %</span>`;
   }
@@ -628,6 +675,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
     const dev = [a, e].map((x) => x.dev && P.devs.find((d) => d.id === x.dev)).find((d) => d && d.In);
     w.mm2 = mm2Of(dev && dev.In);
     if (a.feed || e.feed) { const inp = [a, e].map((x) => x.dev && P.devs.find((d) => d.id === x.dev)).find(Boolean); w.mm2 = Math.max(w.mm2, mm2Of(inp && inp.In)); }
+    if (C.WN(P).auto) w.num = C.nextWireNum(P);
     commit(() => { P.wires.push(w); E.sel = { kind: 'wire', id: w.id }; return ''; });
   }
   /* гребёнка от выбранного аппарата вправо по соседям того же вида */
@@ -642,6 +690,41 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
     commit(() => { P.combs.push({ id: uid('c'), devs: run.map((x) => x.id), conds }); E.sel = { kind: 'comb', id: P.combs[P.combs.length - 1].id }; return ''; });
   }
 
+  /* буфер обмена */
+  function copySel(cut) {
+    const ids = selIds();
+    if (!ids.length) { flash('Выдели аппараты — щелчком, Shift+щелчком или рамкой.'); return; }
+    E.clip = K().copyDevs(E.P, ids);
+    if (cut) { E.sel = ids.length === 1 ? { kind: 'dev', id: ids[0] } : { kind: 'devs', ids }; delSel(); flash(`Вырезано аппаратов: ${ids.length}. Ctrl+V — вставить.`, 'note'); }
+    else flash(`Скопировано аппаратов: ${ids.length}${E.clip.wires.length ? `, проводов между ними: ${E.clip.wires.length}` : ''}. Ctrl+V — вставить.`, 'note');
+  }
+  function paste() {
+    if (!E.clip) { flash('Буфер пуст: сначала скопируй аппараты (Ctrl+C).'); return; }
+    const s0 = E.sel && E.sel.kind === 'dev' && E.P.devs.find((d) => d.id === E.sel.id);
+    commit(() => { const r = K().pasteDevs(E.P, E.clip, s0 ? s0.row : null); if (r.err) return r.err; setSel(r.ids); return ''; });
+  }
+  /* правая кнопка мыши: меню того, что под указателем */
+  function ctxHTML(kind) {
+    const it = (act, label, key, dis) => `<button type="button" data-act="${act}"${dis ? ' disabled' : ''}><span>${esc(label)}</span>${key ? `<span class="k">${key}</span>` : ''}</button>`;
+    const ids = selIds(), one = ids.length === 1 && E.P.devs.find((d) => d.id === ids[0]);
+    if (kind === 'dev') return [it('copy', 'Копировать', 'Ctrl+C'), it('cut', 'Вырезать', 'Ctrl+X'), it('paste', 'Вставить', 'Ctrl+V', !E.clip), one ? it('dup', 'Копия рядом', 'Ctrl+D') : '', '<hr>',
+      one && ['mcb', 'rcbo', 'sw', 'km'].includes(one.type) ? it('autoline', 'Вывести линию') : '', one && (one.type === 'mcb' || one.type === 'rcbo') ? it('comb1', 'Гребёнка вправо') : '', ids.length > 1 ? it('g-pack', 'Сдвинуть вплотную') : '', '<hr>', it('del', ids.length > 1 ? 'Удалить выделенные' : 'Удалить', 'Del')].join('');
+    if (kind === 'wire') { const w = findSel(); const st = w ? K().styleOf(E.P, w) : ''; const m = (v) => (st === v ? '● ' : ''); return [it('style-duct', m('duct') + 'По кабель-каналам'), it('style-loop', m('loop') + 'Петлёй напрямую'), it('style-line', m('line') + 'Прямой линией'), '<hr>', it('reroute', 'Сбросить трассу'), it('del', 'Удалить провод', 'Del')].join(''); }
+    if (kind === 'bus' || kind === 'line' || kind === 'comb') return it('del', 'Удалить', 'Del');
+    return [it('paste', 'Вставить', 'Ctrl+V', !E.clip), '<hr>', it('stops', 'Ограничители по краям реек'), it('wn-renum', 'Перенумеровать провода'), it('tab-journal', 'Кабельный журнал'), it('tab-bom', 'Оборудование в щите'), it('check', 'Проверить щит')].join('');
+  }
+  const closeCtx = () => { const m = E.root && E.root.querySelector('.ed-ctx'); if (m) m.remove(); };
+  function showCtx(x, y, kind) {
+    closeCtx();
+    const m = document.createElement('div');
+    m.className = 'ed-ctx';
+    m.innerHTML = ctxHTML(kind);
+    E.root.appendChild(m);
+    const r = m.getBoundingClientRect();
+    m.style.left = Math.max(4, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
+    m.style.top = Math.max(4, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
+  }
+
   /* изменение свойства: g — группа полей (pf щит, mf штамп, df аппарат, wf провод, bf шина, lf линия), k — поле */
   function setProp(g, k, val) {
     const o = findSel();
@@ -652,6 +735,12 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
       if (k === 'rows') return C.resize(E.P, Number(val), E.P.mods);
       if (k === 'mods') return C.resize(E.P, E.P.rows, Number(val));
       if (k === 'pitch') { E.P.pitch = Number(val); return ''; }
+      if (/^rp\d+$/.test(k)) { const j = Number(k.slice(2)); E.P.pitches = E.P.pitches || []; for (let q = 0; q < E.P.rows - 1; q++) if (!E.P.pitches[q]) E.P.pitches[q] = E.P.pitch || 134; E.P.pitches[j] = Number(val); return ''; }
+      if (k === 'wireStyle') { E.P.wireStyle = val; return ''; }
+      if (k === 'slack') { E.P.slack = Math.max(0, Math.min(100, Number(val) || 0)); return ''; }
+      if (k === 'wnStart') { E.P.wn = Object.assign(C.WN(E.P), { start: Math.max(0, Math.round(Number(val) || 0)) }); return ''; }
+      if (k === 'wnShow' || k === 'wnColor' || k === 'wnAuto') { E.P.wn = Object.assign(C.WN(E.P), { [{ wnShow: 'show', wnColor: 'color', wnAuto: 'auto' }[k]]: !!val }); return ''; }
+      if (k === 'ferr' || k === 'stickers' || k === 'dims') { E.P.view = Object.assign(C.VIEW(E.P), { [k === 'ferr' ? 'ferrules' : k]: !!val }); return ''; }
       if (k === 'phases') { E.P.feed.phases = Number(val); E.P.wires = E.P.wires.filter((w) => !(w.a.feed && !C.feedCores(E.P).includes(w.a.feed)) && !(w.b.feed && !C.feedCores(E.P).includes(w.b.feed))); return ''; }
       if (k === 'earthing') { E.P.feed.earthing = val; E.P.wires = E.P.wires.filter((w) => !(w.a.feed && !C.feedCores(E.P).includes(w.a.feed)) && !(w.b.feed && !C.feedCores(E.P).includes(w.b.feed))); return ''; }
       return '';
@@ -688,7 +777,14 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
       E.P.wires = E.P.wires.filter((w) => ![w.a, w.b].some((x) => x.dev === d.id && !names.includes(x.term)));
       return '';
     }, true);
-    if (g === 'wf' && o) return commit(() => { if (k === 'side') { if (val) o.side = val; else delete o.side; } else o[k] = k === 'mm2' ? Number(val) : val; return ''; }, true);
+    if (g === 'wf' && o) return commit(() => {
+      if (k === 'side' || k === 'style' || k === 'color' || k === 'mark') { if (val !== '' && val != null) o[k] = val; else delete o[k]; if (k === 'style') { delete o.dx; delete o.dy; } return ''; }
+      if (k === 'slack') { if (val === '' || val == null) delete o.slack; else o.slack = Math.max(0, Math.min(100, Number(val))); return ''; }
+      if (k === 'num') { if (val === '' || val == null) { o.num = ''; return ''; } const n = Math.round(Number(val)); if (E.P.wires.some((x) => x !== o && Number(x.num) === n)) return `Номер ${n} уже есть у другого провода — у каждого провода свой номер.`; o.num = n; return ''; }
+      o[k] = k === 'mm2' ? Number(val) : val;
+      return '';
+    }, true);
+    if (g === 'cf' && o) return commit(() => { o[k] = val; return ''; }, true);
     if (g === 'bf' && o) return commit(() => {
       if (k === 'id') { const nv = String(val).trim(); if (!nv) return 'Обозначение не может быть пустым.'; if (E.P.buses.some((b) => b.id === nv && b !== o)) return `Шина ${nv} уже есть.`; E.P.wires.forEach((w) => [w.a, w.b].forEach((x) => { if (x.bus === o.id) x.bus = nv; })); o.id = nv; E.sel.id = nv; return ''; }
       if (k === 'kind') { o.kind = val; return ''; }
@@ -715,7 +811,15 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
   }
 
   /* ---------- печать ---------- */
-  function sheetSVG(kind, fmt) {
+  /* строки таблиц для листов печати */
+  function tableOf(kind) {
+    const C = K(), P = E.P;
+    if (kind === 'journal') return { title: 'Кабельный журнал', head: ['№', 'Откуда', 'Куда', 'Марка', 'мм²', 'Цвет', 'Длина, м'], w: [0.06, 0.2, 0.2, 0.2, 0.07, 0.17, 0.1], rows: C.journal(P).map((r) => [String(r.num), r.from, r.to, r.mark, String(r.mm2).replace('.', ','), r.color, S.fmt(r.len, 2)]) };
+    return { title: 'Спецификация оборудования, изделий и материалов', head: ['№', 'Наименование', 'Артикул', 'Кол-во'], w: [0.06, 0.62, 0.18, 0.14], rows: C.bom(P).map((b, i) => [String(i + 1), b.name, b.art || '', `${S.fmt(b.qty, 1)} ${b.unit}`]) };
+  }
+  const ROWH = 5.6;
+  const perPage = (fmt) => Math.max(5, Math.floor(((fmt === 'A4' ? 210 : 297) - 10 - 55 - 10 - 14) / ROWH) - 1);
+  function sheetSVG(kind, fmt, page) {
     const P = E.P, m = P.meta;
     const [SW, SH] = fmt === 'A4' ? [297, 210] : [420, 297];
     const ix = 20, iy = 5, iw = SW - 25, ih = SH - 10;
@@ -736,7 +840,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
     tb += tx(rx + 2, tby + 21, (m.object || P.name).slice(0, 40), 3.2) + tx(rx + 2, tby + 26, '', 3);
     tb += tx(rx + 72, tby + 18.6, 'Стадия', 2.4) + tx(rx + 87, tby + 18.6, 'Лист', 2.4) + tx(rx + 102, tby + 18.6, 'Листов', 2.4);
     tb += tx(rx + 77.5, tby + 26.5, m.stage || 'Р', 3.4, { a: 'middle' }) + tx(rx + 92.5, tby + 26.5, String(m.sheet || 1), 3.4, { a: 'middle' }) + tx(rx + 110, tby + 26.5, String(m.sheets || 1), 3.4, { a: 'middle' });
-    tb += tx(rx + 35, tby + 36, kind === 'panel' ? 'Щит. Общий вид с монтажом' : kind === 'scheme' ? 'Схема однолинейная принципиальная' : 'Спецификация', 2.8, { a: 'middle' });
+    tb += tx(rx + 35, tby + 36, kind === 'panel' ? 'Щит. Общий вид с монтажом' : kind === 'scheme' ? 'Схема однолинейная принципиальная' : kind === 'journal' ? 'Кабельный журнал' : 'Спецификация', 2.8, { a: 'middle' });
     tb += tx(rx + 35, tby + 49, P.name.slice(0, 44), 3, { a: 'middle', b: true }) + tx(rx + 85, tby + 49, (m.org || '').slice(0, 24), 3, { a: 'middle' });
     const frame = `<rect x="0" y="0" width="${SW}" height="${SH}" style="fill:#fff;stroke:#bbb;stroke-width:0.2"/><rect x="${ix}" y="${iy}" width="${iw}" height="${ih}" style="fill:none;stroke:#000;stroke-width:0.6"/>`;
     const area = { x: ix + 5, y: iy + 5, w: iw - 10, h: ih - tbH - 10 };
@@ -766,14 +870,24 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
       const mm = s.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
       if (mm) { const vw = +mm[1], vh = +mm[2], sc = Math.min(area.w / vw, area.h / vh); content = `<g transform="translate(${area.x} ${area.y}) scale(${sc})">${s.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</g>`; }
     } else {
-      const rows = K().bom(P);
-      content = tx(area.x, area.y + 6, 'Спецификация оборудования, изделий и материалов', 4, { b: true });
-      rows.forEach((b, i) => { const y = area.y + 14 + i * 6; content += ln(area.x, y + 1.6, area.x + area.w, y + 1.6, 0.15) + tx(area.x + 2, y, `${i + 1}. ${b.name}`, 3.2) + tx(area.x + area.w - 2, y, `${S.fmt(b.qty, 1)} ${b.unit}`, 3.2, { a: 'end' }); });
+      const T = tableOf(kind), n = perPage(fmt), pg = page || 0;
+      const rows = T.rows.slice(pg * n, pg * n + n);
+      const pages = Math.max(1, Math.ceil(T.rows.length / n));
+      content = tx(area.x, area.y + 5, T.title + (pages > 1 ? ` (лист ${pg + 1} из ${pages})` : ''), 4, { b: true });
+      const cw = T.w.map((f) => f * area.w);
+      [T.head].concat(rows).forEach((row, ri) => {
+        const y = area.y + 9 + ri * ROWH;
+        content += `<rect x="${area.x}" y="${y}" width="${area.w}" height="${ROWH}" style="fill:${ri ? '#fff' : '#eee'};stroke:#000;stroke-width:0.2"/>`;
+        let cx = area.x;
+        row.forEach((c, ci) => { const max = Math.floor(cw[ci] / 1.6); const str = String(c); content += tx(cx + 1.2, y + 4, str.length > max ? str.slice(0, max - 1) + '…' : str, 2.9, { b: !ri }); cx += cw[ci]; if (ci < row.length - 1) content += ln(cx, y, cx, y + ROWH, 0.2); });
+      });
     }
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${SH}" width="${SW}mm" height="${SH}mm" style="font-family:Arial,sans-serif;--ink:#000;--ink-2:#333;--line-2:#666;--surface:#fff;--surface-2:#f2f2f2;--accent:#0969da;--enc:#e4e8ec;--enc-line:#b5bec7;--rail:#aeb4af;--w-l1:#8A5426;--w-l2:#1D1D1D;--w-l3:#8E9497;--w-n:#2A6CD6;--w-pe:#2F9B4A;--w-pey:#E2BE14;--font-body:Arial,sans-serif;--font-mono:Consolas,monospace">${frame}${content}${tb}</svg>`;
   }
   async function printSheets(fmt, kinds) {
-    const sheets = kinds.map((k, i) => { E.P.meta.sheet = i + 1; E.P.meta.sheets = kinds.length; return sheetSVG(k, fmt); });
+    const list = [];
+    kinds.forEach((k) => { const n = k === 'bom' || k === 'journal' ? Math.max(1, Math.ceil(tableOf(k).rows.length / perPage(fmt))) : 1; for (let pg = 0; pg < n; pg++) list.push([k, pg]); });
+    const sheets = list.map(([k, pg], i) => { E.P.meta.sheet = i + 1; E.P.meta.sheets = list.length; return sheetSVG(k, fmt, pg); });
     const [SW, SH] = fmt === 'A4' ? [297, 210] : [420, 297];
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(E.P.name)}</title><style>@page{size:${fmt} landscape;margin:0}body{margin:0}svg{display:block;width:${SW}mm;height:${SH}mm;page-break-after:always}</style></head><body>${sheets.join('')}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`;
     const w = window.open('', '_blank');
@@ -785,7 +899,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
 
   E.sheetSVG = sheetSVG;
   E.schemeSVG = schemeSVG;
-  E.api = { endAt, moveWireEnd, setSel, moveGroup, packGroup, setProp, addDevice, moveDev, moveBus, delSel, wireClick, makeComb, commit, undo, redo };
+  E.api = { copySel, paste, ctxHTML, endAt, moveWireEnd, setSel, moveGroup, packGroup, setProp, addDevice, moveDev, moveBus, delSel, wireClick, makeComb, commit, undo, redo };
 
   /* ---------- экран ---------- */
   S.view('editor', {
@@ -805,7 +919,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
 <button class="btn sm" type="button" data-act="save-as" title="Сохранить в «Мои щиты»">${S.icon('save')}Сохранить</button>
 <span class="sep"></span>
 <button class="btn sm" type="button" data-act="undo" title="Отменить (Ctrl+Z)">↶</button><button class="btn sm" type="button" data-act="redo" title="Вернуть (Ctrl+Y)">↷</button>
-<button class="btn sm" type="button" data-tool="select" aria-pressed="${E.tool === 'select'}">Выбор</button><button class="btn sm" type="button" data-tool="wire" aria-pressed="${E.tool === 'wire'}">${S.icon('cable')}Провод</button>
+<button class="btn sm" type="button" data-tool="select" aria-pressed="${E.tool === 'select'}">Выбор</button><button class="btn sm" type="button" data-tool="wire" aria-pressed="${E.tool === 'wire'}">${S.icon('cable')}Провод</button><button class="btn sm" type="button" data-tool="erase" aria-pressed="${E.tool === 'erase'}" title="Ластик: нажми на аппарат, провод, шину или линию — удалится">${S.icon('trash')}Ластик</button>
 <button class="btn sm" type="button" data-act="zoom-out" title="Мельче">−</button><button class="btn sm" type="button" data-act="zoom-fit" title="Весь щит / по ширине окна">⤢</button><button class="btn sm" type="button" data-act="zoom-in" title="Крупнее">+</button>
 <span class="sep"></span>
 <button class="btn sm" type="button" data-act="check">${S.icon('shield')}Проверить</button>
@@ -814,7 +928,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
 </div>
 <div class="ed-main">
 <aside class="ed-side" data-lib>${libHTML()}</aside>
-<section class="ed-center"><div class="ed-tabs" role="tablist">${[['panel', 'Вид щита'], ['scheme', 'Однолинейная схема'], ['groups', 'Группы'], ['bom', 'Спецификация'], ['checks', 'Проверки']].map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${E.tab === k}">${l}</button>`).join('')}</div><div data-pane style="flex:1;display:flex;flex-direction:column;min-height:420px">${tabHTML()}</div></section>
+<section class="ed-center"><div class="ed-tabs" role="tablist">${[['panel', 'Вид щита'], ['scheme', 'Однолинейная схема'], ['groups', 'Группы'], ['bom', 'Спецификация'], ['journal', 'Кабельный журнал'], ['checks', 'Проверки']].map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${E.tab === k}">${l}</button>`).join('')}</div><div data-pane style="flex:1;display:flex;flex-direction:column;min-height:420px">${tabHTML()}</div></section>
 <aside class="ed-side ed-props" data-props>${propsHTML()}</aside>
 </div>
 <input type="file" accept=".json,application/json" data-file hidden><input type="file" accept=".json,application/json" data-libfile hidden>
@@ -844,8 +958,8 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
       });
       root.addEventListener('change', (e) => {
         const el = e.target;
-        const val = el.type === 'number' ? Number(el.value) : el.value;
-        const g = ['pf', 'mf', 'df', 'wf', 'bf', 'lf'].find((x) => el.dataset[x]);
+        const val = el.type === 'checkbox' ? el.checked : el.type === 'number' ? (el.value === '' ? '' : Number(el.value)) : el.value;
+        const g = ['pf', 'mf', 'df', 'wf', 'bf', 'lf', 'cf'].find((x) => el.dataset[x]);
         if (g) setProp(g, el.dataset[g], val);
         if (el.matches('[data-file]') && el.files[0]) {
           const f = el.files[0]; el.value = '';
@@ -854,7 +968,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
             try { p = JSON.parse(t); } catch (er) { p = null; }
             if (!p || !Array.isArray(p.devs) || !p.rows || !p.mods) { flash('Это не файл щита редактора.'); return; }
             p.pitch = p.pitch || 134; p.buses = p.buses || []; p.wires = p.wires || []; p.combs = p.combs || []; p.lines = p.lines || []; p.meta = p.meta || {}; p.feed = p.feed || { phases: 1, earthing: 'TN-C-S' };
-            commit(() => { E.P = p; E.sel = null; E.zoom = 0; return ''; }, false, true);
+            commit(() => { E.P = norm(p); E.sel = null; E.zoom = 0; return ''; }, false, true);
             S.toast && S.toast('Щит загружен');
           });
         }
@@ -869,12 +983,13 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
         if (it) {
           let list = []; try { list = JSON.parse(localStorage.getItem(LSL) || '[]'); } catch (er) { list = []; }
           const x = list[Number(it.dataset.openi)];
-          if (x) commit(() => { E.P = clone(x.P); E.P.pitch = E.P.pitch || 134; E.sel = null; E.zoom = 0; return ''; }, false, true);
+          if (x) commit(() => { E.P = norm(clone(x.P)); E.sel = null; E.zoom = 0; return ''; }, false, true);
           return;
         }
         const b = e.target.closest('button');
         const drop = root.querySelector('[data-drop]');
         if (drop && !(b && b.dataset.act === 'menu')) drop.classList.remove('open');
+        closeCtx();
         if (!b) return;
         const C = K();
         if (b.dataset.brand) { E.brand = b.dataset.brand; refresh('lib'); return; }
@@ -887,6 +1002,23 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
         const act = b.dataset.act;
         if (!act) return;
         if (act === 'menu') { drop.classList.toggle('open'); return; }
+        const goTab = (t) => { E.tab = t; E.wireStart = null; root.querySelectorAll('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.tab === t))); root.querySelector('[data-pane]').innerHTML = tabHTML(); if (t === 'panel') drawCanvas(); };
+        const fname = (suffix) => `${(P().name || 'shchit').replace(/[\\/:*?"<>|]+/g, ' ').trim()} — ${suffix}.csv`;
+        if (act === 'copy') { copySel(false); return; }
+        if (act === 'cut') { copySel(true); return; }
+        if (act === 'paste') { paste(); return; }
+        if (act === 'style-duct' || act === 'style-loop' || act === 'style-line') { const w = findSel(); if (w && E.sel.kind === 'wire') commit(() => { w.style = act.slice(6); delete w.dx; delete w.dy; return ''; }, true); return; }
+        if (act === 'stops') {
+          let res = null;
+          const ok = commit(() => { res = C.autoStops(P()); if (!res.added) return res.miss ? 'Для ограничителей нет места: аппараты стоят до краёв реек.' : 'Ограничители уже стоят по краям аппаратов.'; return ''; }, true);
+          if (ok && res && res.added) flash(`Поставлено ограничителей: ${res.added}.${res.miss ? ` Ещё ${res.miss} не встали: рейка заполнена до края.` : ''}`, 'note');
+          return;
+        }
+        if (act === 'wn-renum') { commit(() => { C.numberWires(P(), true); return ''; }, true); flash(`Провода перенумерованы с ${C.WN(P()).start} сверху вниз и слева направо.`, 'note'); if (E.tab === 'journal') goTab('journal'); return; }
+        if (act === 'tab-journal') { goTab('journal'); return; }
+        if (act === 'tab-bom') { goTab('bom'); return; }
+        if (act === 'csv-bom') { S.saveFile(fname('спецификация'), csv(['№', 'Наименование', 'Артикул', 'Количество', 'Ед.'], C.bom(P()).map((b, i) => [i + 1, b.name, b.art || '', S.fmt(b.qty, 1), b.unit])), 'text/csv;charset=utf-8'); return; }
+        if (act === 'csv-journal') { S.saveFile(fname('кабельный журнал'), csv(['№ провода', 'Откуда', 'Куда', 'Марка', 'Сечение, мм²', 'Цвет', 'Длина, м'], C.journal(P()).map((r) => [r.num, r.from, r.to, r.mark, String(r.mm2).replace('.', ','), r.color, S.fmt(r.len, 2)])), 'text/csv;charset=utf-8'); return; }
         if (act === 'full') { const on = document.body.classList.toggle('ed-full'); b.setAttribute('aria-pressed', String(on)); try { localStorage.setItem('shk:ed:full', on ? '1' : ''); } catch (er) { /* без памяти */ } if (E.fit !== 'all') E.zoom = 0; else E.zoom = -1; drawCanvas(); return; }
         if (act === 'undo') undo();
         else if (act === 'redo') redo();
@@ -956,7 +1088,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
         else if (act === 'print') {
           E.sel = null; E.myForm = false; E.newForm = false;
           root.querySelector('[data-props]').innerHTML = `<h3>Печать и PDF</h3><label>Формат листа</label><select data-print-fmt><option>A3</option><option>A4</option></select>
-<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="panel" checked> Вид щита с монтажом</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="scheme" checked> Однолинейная схема</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="bom" checked> Спецификация</label>
+<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="panel" checked> Вид щита с монтажом</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="scheme" checked> Однолинейная схема</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="bom" checked> Спецификация</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-pk="journal" checked> Кабельный журнал</label>
 <p class="small muted">Листы с рамкой и основной надписью. Данные штампа — в свойствах щита (нажми на пустое место холста). В окне печати выбери «Сохранить как PDF».</p><div class="row"><button class="btn sm primary" type="button" data-act="print-go">${S.icon('doc')}Печатать</button><button class="btn sm" type="button" data-act="print-svg">${S.icon('download')}Вид щита в SVG</button></div>`;
         } else if (act === 'print-go') {
           const fmt = root.querySelector('[data-print-fmt]').value;
@@ -1064,7 +1196,8 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
         } else if (dr.kind === 'seg' && p) {
           const w = E.P.wires.find((x) => x.id === dr.id);
           if (!w) return;
-          if (dr.seg === 'h') w.dy = Math.max(-(C.G.DUCT / 2), Math.min(C.G.DUCT / 2, dr.v0 + (p.y - dr.p0.y)));
+          if (dr.seg === 'c') { if (C.styleOf(E.P, w) === 'loop') w.dy = Math.max(-10, Math.min(80, dr.v0 + (p.y - dr.p0.y) * dr.sgn)); }
+          else if (dr.seg === 'h') w.dy = Math.max(-(C.G.DUCT / 2), Math.min(C.G.DUCT / 2, dr.v0 + (p.y - dr.p0.y)));
           else w.dx = Math.max(-12, Math.min(C.G.SD, dr.v0 + (dr.left ? p.x - dr.p0.x : dr.p0.x - p.x)));
           schedule();
         }
@@ -1077,7 +1210,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
         window.removeEventListener('pointercancel', onCancel);
         if (ghostEl) { ghostEl.remove(); ghostEl = null; }
       };
-      const onCancel = () => { const dr = E.drag; E.drag = null; endDrag(); if (dr && dr.kind === 'seg') { const w = E.P.wires.find((x) => x.id === dr.id); if (w) { if (dr.seg === 'h') w.dy = dr.v0; else w.dx = dr.v0; } } E.view = null; E.ghost = null; E.busGhost = null; E.band = null; E.preview = null; E.hover = null; drawCanvas(); };
+      const onCancel = () => { const dr = E.drag; E.drag = null; endDrag(); if (dr && dr.kind === 'seg') { const w = E.P.wires.find((x) => x.id === dr.id); if (w) { if (dr.seg !== 'v') w.dy = dr.v0; else w.dx = dr.v0; } } E.view = null; E.ghost = null; E.busGhost = null; E.band = null; E.preview = null; E.hover = null; drawCanvas(); };
       const onUp = () => {
         const dr = E.drag;
         E.drag = null;
@@ -1128,9 +1261,9 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
           const w = E.P.wires.find((x) => x.id === dr.id);
           if (!w) return;
           if (!dr.moved) { E.sel = { kind: 'wire', id: dr.id }; E.myForm = false; E.newForm = false; refresh(); return; }
-          const v = dr.seg === 'h' ? w.dy : w.dx;
-          if (dr.seg === 'h') w.dy = dr.v0; else w.dx = dr.v0;
-          commit(() => { if (dr.seg === 'h') w.dy = Math.round(v * 10) / 10; else w.dx = Math.round(v * 10) / 10; E.sel = { kind: 'wire', id: w.id }; return ''; }, true);
+          const v = dr.seg !== 'v' ? w.dy : w.dx;
+          if (dr.seg !== 'v') w.dy = dr.v0; else w.dx = dr.v0;
+          commit(() => { if (dr.seg !== 'v') w.dy = Math.round((v || 0) * 10) / 10; else w.dx = Math.round(v * 10) / 10; E.sel = { kind: 'wire', id: w.id }; return ''; }, true);
         }
       };
       const startDrag = (dr, ev) => { E.drag = Object.assign(dr, { cx: ev.clientX, cy: ev.clientY, moved: false, light: (E.drawMs || 0) > 9 }); window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp); window.addEventListener('pointercancel', onCancel); };
@@ -1146,8 +1279,15 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
           startDrag({ kind: 'new', sid: s.id, dev, w: dev.w, grab: dev.w / 2, title: s.series }, ev);
           return;
         }
+        if (!ev.target.closest('.ed-ctx')) closeCtx();
         const cv = ev.target.closest('[data-canvas]');
         if (!cv || !ev.target.closest('svg')) return;
+        if (E.tool === 'erase') {
+          ev.preventDefault();
+          const hit = hitAt(ev.target);
+          if (hit && hit.kind !== 'empty') { E.sel = hit; delSel(); }
+          return;
+        }
         const term = ev.target.closest('[data-tdev],[data-tbus],[data-feed],[data-core]');
         if (term) { ev.preventDefault(); const en = endFromEl(term); if (en) wireClick(en); return; }
         if (E.wireStart) { E.wireStart = null; drawCanvas(); return; }
@@ -1166,7 +1306,7 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
           if (!w) return;
           const p = svgPt(ev);
           const x1 = Number(seg.getAttribute('x1'));
-          startDrag({ kind: 'seg', id: w.id, seg: seg.dataset.seg, p0: p, v0: seg.dataset.seg === 'h' ? (w.dy || 0) : (w.dx || 0), left: x1 < K().W(E.P) / 2 }, ev);
+          startDrag({ kind: 'seg', id: w.id, seg: seg.dataset.seg, p0: p, v0: seg.dataset.seg !== 'v' ? (w.dy || 0) : (w.dx || 0), left: x1 < K().W(E.P) / 2, sgn: K().exitDir(E.P, w.a) }, ev);
           return;
         }
         const dv = ev.target.closest('[data-dev]');
@@ -1207,6 +1347,32 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
         ev.preventDefault();
         startDrag({ kind: 'band', p0: svgPt(ev), shift: ev.shiftKey }, ev);
       });
+
+      /* что под указателем: аппарат (и по его клемме), провод, шина, гребёнка, линия или пустое место */
+      const hitAt = (t) => {
+        const q = (sel) => t.closest(sel);
+        if (q('[data-dev]')) return { kind: 'dev', id: q('[data-dev]').dataset.dev };
+        if (q('[data-tdev]')) return { kind: 'dev', id: q('[data-tdev]').dataset.tdev };
+        if (q('[data-wire]')) return { kind: 'wire', id: q('[data-wire]').dataset.wire };
+        if (q('[data-bus]')) return { kind: 'bus', id: q('[data-bus]').dataset.bus };
+        if (q('[data-tbus]')) return { kind: 'bus', id: q('[data-tbus]').dataset.tbus };
+        if (q('[data-comb]')) return { kind: 'comb', id: q('[data-comb]').dataset.comb };
+        if (q('[data-lineg]')) return { kind: 'line', id: q('[data-lineg]').dataset.lineg };
+        if (q('[data-line]')) return { kind: 'line', id: q('[data-line]').dataset.line };
+        return { kind: 'empty' };
+      };
+      root.addEventListener('contextmenu', (ev) => {
+        const cv = ev.target.closest && ev.target.closest('[data-canvas]');
+        if (!cv || !ev.target.closest('svg') || E.drag) return;
+        ev.preventDefault();
+        E.wireStart = null;
+        const h = hitAt(ev.target);
+        if (h.kind === 'dev') { if (!selIds().includes(h.id)) setSel([h.id]); }
+        else if (h.kind !== 'empty') { E.sel = { kind: h.kind, id: h.id }; E.myForm = false; E.newForm = false; }
+        refresh();
+        showCtx(ev.clientX, ev.clientY, h.kind);
+      });
+      root.addEventListener('scroll', closeCtx, true);
 
       /* провод тянется за указателем */
       root.addEventListener('pointermove', (ev) => {
@@ -1254,7 +1420,10 @@ ${canLine ? '<p class="small muted">«Вывести линию» добавит
         else if (mod && (k === 'y' || k === 'н' || ((k === 'z' || k === 'Z' || k === 'я' || k === 'Я') && ev.shiftKey))) { ev.preventDefault(); redo(); }
         else if (mod && (k === 'd' || k === 'в') && o && E.sel.kind === 'dev') { ev.preventDefault(); addDevice(o.sid, { row: o.row, x: o.x + o.w }, { poles: o.poles, In: o.In, curve: o.curve, ma: o.ma, rt: o.rt, w: o.w }); }
         else if ((k === 'Delete' || k === 'Backspace') && o) { ev.preventDefault(); delSel(); }
-        else if (k === 'Escape') { if (!E.wireStart && !E.drag && E.sel) { setSel([]); refresh(); return; } E.wireStart = null; E.tool = 'select'; root.querySelectorAll('[data-tool]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.tool === 'select'))); if (E.drag) onCancel(); drawCanvas(); }
+        else if (k === 'Escape') { closeCtx(); if (E.tool === 'erase') { E.tool = 'select'; root.querySelectorAll('[data-tool]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.tool === 'select'))); drawCanvas(); return; } if (!E.wireStart && !E.drag && E.sel) { setSel([]); refresh(); return; } E.wireStart = null; E.tool = 'select'; root.querySelectorAll('[data-tool]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.tool === 'select'))); if (E.drag) onCancel(); drawCanvas(); }
+        else if (mod && ['c', 'C', 'с', 'С'].includes(k)) { ev.preventDefault(); copySel(false); }
+        else if (mod && ['x', 'X', 'ч', 'Ч'].includes(k)) { ev.preventDefault(); copySel(true); }
+        else if (mod && ['v', 'V', 'м', 'М'].includes(k)) { ev.preventDefault(); paste(); }
         else if (mod && (k === 'a' || k === 'ф' || k === 'A' || k === 'Ф')) { ev.preventDefault(); setSel(E.P.devs.map((d) => d.id)); refresh(); }
         else if (o && E.sel.kind === 'devs' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(k)) { ev.preventDefault(); moveGroup(selIds(), { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'U', ArrowDown: 'D' }[k]); }
         else if (o && E.sel.kind === 'dev' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(k)) { ev.preventDefault(); moveDev(o, { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'U', ArrowDown: 'D' }[k]); }

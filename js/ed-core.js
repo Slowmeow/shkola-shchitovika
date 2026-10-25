@@ -9,7 +9,7 @@
   const G = { MOD: 17.5, ZONE: 92, DUCT: 42, SD: 34, BUSZ: 28, LANES: 11 };
   const PITCHES = [125, 134, 150, 175]; // расстояние между осями реек, мм
   const PRESETS = [[1, 12], [2, 12], [3, 12], [4, 12], [2, 18], [3, 18], [4, 18], [3, 24], [4, 24], [5, 24], [6, 24]];
-  const PREFIX = { mcb: 'QF', sw: 'QS', rcd: 'QD', rcbo: 'QFD', rn: 'KV', spd: 'FV', meter: 'PI', xt: 'XT', km: 'KM', blank: 'Z', dbus: 'XS' };
+  const PREFIX = { stop: 'ZS', mcb: 'QF', sw: 'QS', rcd: 'QD', rcbo: 'QFD', rn: 'KV', spd: 'FV', meter: 'PI', xt: 'XT', km: 'KM', blank: 'Z', dbus: 'XS' };
   const COND_COL = { L: 'var(--w-l1)', L1: 'var(--w-l1)', L2: 'var(--w-l2)', L3: 'var(--w-l3)', N: 'var(--w-n)', PE: 'var(--w-pe)', PEN: 'var(--w-pe)' };
   /* цвета наконечников НШВИ по сечению — DIN 46228-4 */
   const FERRULE = { 0.5: '#f4f4f4', 0.75: '#9aa0a6', 1: '#d0312d', 1.5: '#1b1b1b', 2.5: '#2a6cd6', 4: '#9aa0a6', 6: '#e2be14', 10: '#d0312d', 16: '#2a6cd6', 25: '#e2be14', 35: '#d0312d' };
@@ -21,16 +21,34 @@
     feed: { phases: 1, earthing: 'TN-C-S' },
     devs: [], buses: [{ id: 'N1', kind: 'N', zone: 'top', x: 6, n: 10 }, { id: 'PE', kind: 'PE', zone: 'bottom', x: 6, n: 12 }],
     wires: [], combs: [], lines: [],
+    wireStyle: 'duct', slack: 20, wn: { show: true, color: true, start: 1, auto: true }, view: { ferrules: true, stickers: false, dims: false },
     meta: { object: '', author: '', checker: '', org: '', code: '', stage: 'Р', sheet: 1, sheets: 1, date: '' }
   });
 
   /* ---------- геометрия ---------- */
-  const sync = (P) => { G.DUCT = Math.max(30, (P && P.pitch ? P.pitch : 134) - G.ZONE); };
+  /* каналы: k — над рейкой k, rows — под последней. Верхний и нижний — по общему шагу P.pitch,
+     канал между рейками k-1 и k — по своему шагу P.pitches[k-1] (расстояние между осями реек), если он задан */
+  const sync = (P) => {
+    const base = Math.max(30, (P && P.pitch ? P.pitch : 134) - G.ZONE);
+    G.DUCT = base;
+    const n = P && P.rows ? P.rows : 0;
+    G.dH = []; G.dT = [];
+    let y = G.BUSZ;
+    for (let k = 0; k <= n; k++) {
+      const pk = k > 0 && k < n && P.pitches && P.pitches[k - 1];
+      const h = pk ? Math.max(30, pk - G.ZONE) : base;
+      G.dT.push(y); G.dH.push(h);
+      y += h + (k < n ? G.ZONE : 0);
+    }
+  };
+  const ductH = (k) => (G.dH && G.dH[k] != null ? G.dH[k] : G.DUCT);
+  const ductTop = (k) => (G.dT && G.dT[k] != null ? G.dT[k] : G.BUSZ + k * (G.ZONE + G.DUCT));
   const W = (P) => P.mods * G.MOD + 2 * G.SD;
-  const H = (P) => { sync(P); return G.BUSZ + G.DUCT + P.rows * (G.ZONE + G.DUCT) + G.BUSZ; };
-  const rowTop = (i) => G.BUSZ + G.DUCT + i * (G.ZONE + G.DUCT);
+  const H = (P) => { sync(P); return ductTop(P.rows) + ductH(P.rows) + G.BUSZ; };
+  const rowTop = (i) => ductTop(i) + ductH(i);
   const railY = (i) => rowTop(i) + G.ZONE / 2;
-  const ductTop = (k) => G.BUSZ + k * (G.ZONE + G.DUCT); // канал k — над рейкой k, канал rows — под последней
+  /* шаг между осями реек k и k+1 */
+  const pitchOf = (P, k) => (P.pitches && P.pitches[k]) || P.pitch || 134;
   const lib = () => S.edLib;
   const spec = (d) => (lib() && lib().byId(d.sid)) || null;
   const devH = (d) => (spec(d) && spec(d).h) || 85;
@@ -88,12 +106,33 @@
     }
     return null;
   }
-  const laneY = (k, lane, dy) => { const sp = (G.DUCT - 8) / G.LANES; return Math.max(ductTop(k) + 3, Math.min(ductTop(k) + G.DUCT - 3, ductTop(k) + 4 + (lane % G.LANES + 0.5) * sp + (dy || 0))); };
+  const laneY = (k, lane, dy) => { const h = ductH(k), sp = (h - 8) / G.LANES; return Math.max(ductTop(k) + 3, Math.min(ductTop(k) + h - 3, ductTop(k) + 4 + (lane % G.LANES + 0.5) * sp + (dy || 0))); };
 
   /* трасса: вертикально в канал, по каналу, при смене канала — через боковой канал */
+  /* как проложен провод: по кабель-каналам, петлёй напрямую (как в небольших щитках) или прямой линией */
+  const styleOf = (P, w) => w.style || P.wireStyle || 'duct';
+  /* куда провод уходит от конца: вниз (+1) с нижних клемм, верхней шины и ввода; вверх (−1) с верхних клемм, нижней шины и кабелей линий */
+  function exitDir(P, e) {
+    if (e.dev) { const d = P.devs.find((x) => x.id === e.dev); const t = d && terms(d).find((x) => x.t === e.term); return t && t.side === 'top' ? -1 : 1; }
+    if (e.bus) { const b = P.buses.find((x) => x.id === e.bus); return b && b.zone === 'top' ? 1 : -1; }
+    return e.feed ? 1 : -1;
+  }
   function route(P, w, idx) {
     const a = endInfo(P, w.a), b = endInfo(P, w.b);
     if (!a || !b) return null;
+    const st = styleOf(P, w);
+    if (st === 'line') return [[a.x, a.y], [b.x, b.y]];
+    /* петля напрямую — только в одном промежутке между рейками; с рейки на рейку провод обходит аппараты сбоку */
+    const dA = a.side === 'feed' ? 0 : a.duct, dB = b.side === 'feed' ? 0 : b.duct;
+    if (st === 'loop' && dA === dB) {
+      const da = exitDir(P, w.a), db = exitDir(P, w.b);
+      const k = Math.max(14, Math.min(70, Math.hypot(b.x - a.x, b.y - a.y) * 0.45)) + (w.dy || 0);
+      const c1 = [a.x, a.y + da * k], c2 = [b.x, b.y + db * k];
+      const pts = [];
+      for (let i = 0; i <= 24; i++) { const t = i / 24, u = 1 - t; pts.push([u * u * u * a.x + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * b.x, u * u * u * a.y + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * b.y]); }
+      pts.bez = [[a.x, a.y], c1, c2, [b.x, b.y]];
+      return pts;
+    }
     const lane = idx % G.LANES;
     const sideLane = Math.max(2, Math.min(G.SD - 4, 4 + (idx % 7) * 3.6 + (w.dx || 0)));
     const pts = [];
@@ -103,6 +142,7 @@
       const ly = laneY(t.duct, lane, w.dy);
       const sx = Math.max(2, Math.min(G.SD - 4, f.x + (w.dx || 0)));
       pts.push([f.x, f.y], [sx, f.y + 4], [sx, ly], [t.x, ly], [t.x, t.y]);
+      if (st === 'loop') pts.round = 9;
       return a.side === 'feed' ? pts : pts.reverse();
     }
     const lyA = laneY(a.duct, lane, w.dy), lyB = laneY(b.duct, lane, w.dy);
@@ -113,9 +153,48 @@
       const sx = left ? sideLane : W(P) - sideLane;
       pts.push([a.x, a.y], [a.x, lyA], [sx, lyA], [sx, lyB], [b.x, lyB], [b.x, b.y]);
     }
+    if (st === 'loop') pts.round = 9;
     return pts;
   }
   const pathLen = (pts) => pts.reduce((s, p, i) => (i ? s + Math.abs(p[0] - pts[i - 1][0]) + Math.abs(p[1] - pts[i - 1][1]) : 0), 0);
+
+  /* ---------- номера проводов, длина, кабельный журнал ---------- */
+  const WN = (P) => Object.assign({ show: true, color: true, start: 1, auto: true }, P.wn || {});
+  const VIEW = (P) => Object.assign({ ferrules: true, stickers: false, dims: false }, P.view || {});
+  const nextWireNum = (P) => Math.max(WN(P).start - 1, ...P.wires.map((w) => Number(w.num) || 0)) + 1;
+  /* all — перенумеровать все провода сверху вниз и слева направо; иначе дать номера только тем, у кого их нет */
+  function numberWires(P, all) {
+    sync(P);
+    if (all) {
+      const key = (w) => { const p = [endInfo(P, w.a), endInfo(P, w.b)].filter(Boolean); return p.length ? [Math.min(...p.map((q) => q.y)), Math.min(...p.map((q) => q.x))] : [1e9, 1e9]; };
+      const order = P.wires.map((w) => [w, key(w)]).sort((p, q) => p[1][0] - q[1][0] || p[1][1] - q[1][1]);
+      order.forEach(([w], i) => { w.num = WN(P).start + i; });
+    } else P.wires.forEach((w) => { if (w.num == null || w.num === '') w.num = nextWireNum(P); });
+  }
+  /* длина провода: трасса + 0,1 м на разделку, плюс запас в процентах */
+  function wireLen(P, w, i) {
+    const pts = route(P, w, i < 0 ? P.wires.indexOf(w) : i);
+    if (!pts) return 0;
+    const slack = w.slack != null && w.slack !== '' ? Number(w.slack) : P.slack != null ? Number(P.slack) : 0;
+    return Math.round((pathLen(pts) / 1000 + 0.1) * (1 + slack / 100) * 100) / 100;
+  }
+  const WCOL = { brown: ['коричневый', '#8A5426'], black: ['чёрный', '#1D1D1D'], grey: ['серый', '#8E9497'], blue: ['синий', '#2A6CD6'], lblue: ['голубой', '#5FB0E8'], yg: ['жёлто-зелёный', '#2F9B4A'], red: ['красный', '#D0312D'], white: ['белый', '#F2F2F2'] };
+  const CONDCOL = { L: 'коричневый', L1: 'коричневый', L2: 'чёрный', L3: 'серый', N: 'синий', PE: 'жёлто-зелёный', PEN: 'жёлто-зелёный с синими метками' };
+  const wireColor = (w) => (w.color && WCOL[w.color] ? WCOL[w.color][0] : CONDCOL[w.cond] || 'цвет по назначению');
+  const MARK = 'ПуГВнг(А)-LS';
+  function endName(P, e) {
+    if (e.dev) return `${e.dev} : ${e.term}`;
+    if (e.bus) return `${e.bus} : отв. ${(e.slot || 0) + 1}`;
+    if (e.feed) return `Ввод : ${e.feed}`;
+    if (e.line) { const l = P.lines.find((x) => x.id === e.line); return `Кабель гр. ${l ? l.num : '?'} : ${e.core}`; }
+    return '?';
+  }
+  /* кабельный журнал: каждый провод щита — номер, откуда, куда, марка, сечение, цвет, длина */
+  function journal(P) {
+    sync(P);
+    return P.wires.map((w, i) => ({ id: w.id, num: w.num == null ? '' : w.num, from: endName(P, w.a), to: endName(P, w.b), mark: w.mark || MARK, mm2: w.mm2 || 2.5, color: wireColor(w), len: wireLen(P, w, i) }))
+      .sort((a, b) => (a.num === '' ? 1e9 : a.num) - (b.num === '' ? 1e9 : b.num));
+  }
 
   /* ---------- цепи и классы проводников ---------- */
   const keyOf = (e) => (e.dev ? `d:${e.dev}:${e.term}` : e.bus ? `b:${e.bus}` : e.feed ? `f:${e.feed}` : e.line ? `l:${e.line}:${e.core}` : '?');
@@ -382,6 +461,7 @@
     if (busBad(T)) { arrangeBuses(T); balanceBuses(T); }
     if (busBad(T)) return `Шины не помещаются в корпус шириной ${mods} модулей — убери лишнюю шину или укороти шины.`;
     P.rows = rows; P.mods = mods; P.buses = T.buses;
+    if (P.pitches) P.pitches = P.pitches.slice(0, Math.max(0, rows - 1));
     return '';
   }
   /* рейки по одной: вставить пустую перед k, убрать пустую k, поменять k и k+1 местами */
@@ -389,6 +469,7 @@
     if (op === 'insert') {
       if (P.rows >= 8) return 'Больше восьми реек в редакторе не бывает — возьми второй щит.';
       P.devs.forEach((d) => { if (d.row >= k) d.row += 1; });
+      if (P.pitches) P.pitches.splice(Math.max(0, k - 1), 0, P.pitch || 134);
       P.rows += 1;
       return '';
     }
@@ -396,6 +477,7 @@
       if (P.rows <= 1) return 'Последнюю рейку не убрать.';
       if (P.devs.some((d) => d.row === k)) return `На рейке ${k + 1} стоят аппараты — сначала перенеси их.`;
       P.devs.forEach((d) => { if (d.row > k) d.row -= 1; });
+      if (P.pitches) P.pitches.splice(Math.max(0, k - 1), 1);
       P.rows -= 1;
       return '';
     }
@@ -405,6 +487,57 @@
       return '';
     }
     return '';
+  }
+  /* ограничители (стопоры) на DIN-рейку по краям аппаратов каждой рейки */
+  function autoStops(P) {
+    let added = 0, miss = 0;
+    const put = (row, x) => {
+      const r = placeInsert(P, row, x, 0.5, null, { snap: false });
+      if (!r) { miss += 1; return; }
+      const d = lib().make('gen-stop');
+      d.id = nextId(P, 'stop'); d.row = row; d.x = r.x; d.label = '';
+      P.devs.push(d);
+      added += 1;
+    };
+    for (let row = 0; row < P.rows; row++) {
+      const ds = () => P.devs.filter((d) => d.row === row && d.type !== 'stop').sort((a, b) => a.x - b.x);
+      if (!ds().length) continue;
+      const x0 = ds()[0].x;
+      if (!P.devs.some((d) => d.row === row && d.type === 'stop' && Math.abs(d.x + d.w - x0) < EPS)) put(row, Math.max(0, x0 - 0.5));
+      const last = ds()[ds().length - 1], x1 = last.x + last.w;
+      if (!P.devs.some((d) => d.row === row && d.type === 'stop' && Math.abs(d.x - x1) < EPS)) put(row, Math.min(x1, P.mods - 0.5));
+    }
+    return { added, miss };
+  }
+  /* буфер обмена: аппараты, провода между ними и их гребёнки */
+  function copyDevs(P, ids) {
+    const set = new Set(ids);
+    const cl = (x) => JSON.parse(JSON.stringify(x));
+    return {
+      devs: P.devs.filter((d) => set.has(d.id)).sort((a, b) => a.row - b.row || a.x - b.x).map(cl),
+      wires: P.wires.filter((w) => set.has(w.a.dev) && set.has(w.b.dev)).map(cl),
+      combs: P.combs.filter((c) => c.devs.every((x) => set.has(x))).map(cl)
+    };
+  }
+  /* вставка: аппараты встают подряд, с теми же промежутками, в конец первой рейки, где хватает места */
+  function pasteDevs(P, clip, prefRow) {
+    if (!clip || !clip.devs.length) return { err: 'Буфер пуст: сначала скопируй аппараты (Ctrl+C).' };
+    const ds = clip.devs;
+    const rel = [];
+    ds.forEach((d, i) => { if (!i) { rel.push(0); return; } const p = ds[i - 1]; rel.push(rel[i - 1] + p.w + (d.row === p.row ? Math.max(0, d.x - p.x - p.w) : 0)); });
+    const span = rel[rel.length - 1] + ds[ds.length - 1].w;
+    if (span > P.mods + EPS) return { err: 'Скопированные аппараты длиннее рейки.' };
+    const order = [...Array(P.rows).keys()];
+    if (prefRow != null && prefRow >= 0 && prefRow < P.rows) order.unshift(...order.splice(prefRow, 1));
+    let place = null;
+    for (const row of order) { const end = P.devs.filter((d) => d.row === row).reduce((m, d) => Math.max(m, d.x + d.w), 0); if (end + span <= P.mods + EPS) { place = { row, x: end }; break; } }
+    for (let row = 0; row < P.rows && !place; row++) for (let x = 0; x + span <= P.mods + EPS; x += 0.5) if (fits(P, row, x, span)) { place = { row, x }; break; }
+    if (!place) return { err: 'Для вставки нет места: освободи рейку или добавь новую.' };
+    const map = {};
+    ds.forEach((d, i) => { const nd = JSON.parse(JSON.stringify(d)); nd.id = nextId(P, d.type, d.cond); map[d.id] = nd.id; nd.row = place.row; nd.x = place.x + rel[i]; P.devs.push(nd); });
+    clip.wires.forEach((w) => { const nw = JSON.parse(JSON.stringify(w)); nw.id = 'w' + Math.random().toString(36).slice(2, 8); nw.a.dev = map[w.a.dev]; nw.b.dev = map[w.b.dev]; delete nw.dx; delete nw.dy; nw.num = WN(P).auto ? nextWireNum(P) : ''; P.wires.push(nw); });
+    clip.combs.forEach((c) => P.combs.push({ id: 'c' + Math.random().toString(36).slice(2, 7), devs: c.devs.map((x) => map[x]), conds: c.conds.slice(), kind: c.kind }));
+    return { ids: ds.map((d) => map[d.id]) };
   }
   /* разложить шины корпуса без наложений */
   function arrangeBuses(P) {
@@ -487,7 +620,7 @@
       if (e) { ungrow(); return { err: e }; }
       T2.wires.push(w);
     }
-    if (opt.apply !== false) { P.lines.push(l); ws.forEach((w) => P.wires.push(w)); } else ungrow();
+    if (opt.apply !== false) { P.lines.push(l); ws.forEach((w) => { if (WN(P).auto) w.num = nextWireNum(P); P.wires.push(w); }); } else ungrow();
     return { line: l, wires: ws };
   }
 
@@ -534,33 +667,41 @@
     balanceBuses(P);
     P.combs = (R.combs || []).map((c) => ({ id: c.id, devs: c.devs.slice(), conds: c.conds.slice() }));
     P.meta.object = cfg.name || '';
+    numberWires(P, true);
     return P;
   }
 
-  /* ---------- спецификация ---------- */
+  /* ---------- спецификация: наименование, артикул, количество ---------- */
   function bom(P) {
     sync(P);
     const rows = {};
-    const add = (k, name, n, unit) => { rows[k] = rows[k] || { name, qty: 0, unit: unit || 'шт' }; rows[k].qty += n; };
+    const add = (k, name, n, unit, art) => { rows[k] = rows[k] || { name, qty: 0, unit: unit || 'шт', art: art || '' }; rows[k].qty += n; };
     P.devs.forEach((d) => {
       const s = spec(d) || {};
       const br = (lib().BRANDS[s.brand] || {}).name || '';
-      const parts = d.type === 'dbus' ? [`Шина ${d.cond || 'N'} на DIN-рейку`, `${S.fmt(d.w, 1)} мод.`] : [br === 'Общие' || br === 'Мои' ? '' : br, s.series || d.type, d.poles ? d.poles + 'P' : '', d.curve ? d.curve + (d.In || '') : d.In ? d.In + ' А' : '', d.ma ? d.ma + ' мА' : '', d.rt ? 'тип ' + d.rt : ''].filter(Boolean);
-      add('d' + parts.join('|'), parts.join(' '), 1);
+      const parts = d.type === 'dbus' ? [`Шина ${d.cond || 'N'} на DIN-рейку`, `${S.fmt(d.w, 1)} мод.`] : d.type === 'stop' ? ['Ограничитель на DIN-рейку'] : [br === 'Общие' || br === 'Мои' ? '' : br, s.series || d.type, d.poles ? d.poles + 'P' : '', d.curve ? d.curve + (d.In || '') : d.In ? d.In + ' А' : '', d.ma ? d.ma + ' мА' : '', d.rt ? 'тип ' + d.rt : ''].filter(Boolean);
+      const art = d.art || '';
+      add('d' + parts.join('|') + '|' + art, parts.join(' '), 1, 'шт', art);
     });
-    P.combs.forEach((c) => add('comb' + c.conds.length, `Шина гребёнчатая ${c.conds.length === 3 ? '3P' : '1P'} (отрезок)`, 1));
+    P.combs.forEach((c) => add('comb' + (c.kind || 'PIN') + c.conds.length, `Шина соединительная ${c.kind === 'FORK' ? 'FORK (вилка)' : 'PIN (штырь)'} ${c.conds.length === 3 ? '3P' : '1P'}, отрезок`, 1));
     P.buses.forEach((b) => add('bus' + b.kind + b.n, `Шина ${b.kind === 'PE' ? 'PE' : 'N'} на ${b.n} отверстий`, 1));
-    const lens = {}, ferr = {};
+    const lens = {};
     P.wires.forEach((w, i) => {
-      const pts = route(P, w, i);
-      if (!pts) return;
-      const k = (w.cond || '?') + '|' + (w.mm2 || 2.5);
-      lens[k] = (lens[k] || 0) + pathLen(pts) / 1000 + 0.1;
-      [w.a, w.b].forEach((e) => { if (e.dev || e.bus) ferr[w.mm2 || 2.5] = (ferr[w.mm2 || 2.5] || 0) + 1; });
+      const L = wireLen(P, w, i);
+      if (!L) return;
+      const k = (w.mark || MARK) + '|' + (w.mm2 || 2.5) + '|' + wireColor(w);
+      lens[k] = (lens[k] || 0) + L;
     });
-    const col = { L: 'коричневый', L1: 'коричневый', L2: 'чёрный', L3: 'серый', N: 'синий', PE: 'жёлто-зелёный', PEN: 'жёлто-зелёный с синими метками', '?': 'цвет по назначению' };
-    Object.keys(lens).sort().forEach((k) => { const [c, m] = k.split('|'); add('w' + k, `Провод ПуГВ ${String(m).replace('.', ',')} мм², ${col[c] || col['?']}`, Math.ceil(lens[k] * 1.2 * 10) / 10, 'м'); });
-    Object.keys(ferr).sort((a, b) => a - b).forEach((m) => add('f' + m, `Наконечник НШВИ ${String(m).replace('.', ',')} мм²`, Math.ceil(ferr[m] * 1.2)));
+    Object.keys(lens).sort().forEach((k) => { const [mk, m, c] = k.split('|'); add('w' + k, `Провод ${mk} 1×${String(m).replace('.', ',')} мм², ${c}`, Math.ceil(lens[k] * 10) / 10, 'м'); });
+    /* наконечники: два провода одного сечения в одной клемме — один двойной НШВИ2 */
+    const at = {};
+    P.wires.forEach((w) => [w.a, w.b].forEach((e) => { if (e.dev || e.bus) { const k = e.dev ? keyOf(e) : `b:${e.bus}:${e.slot}`; (at[k] = at[k] || []).push(w.mm2 || 2.5); } }));
+    const one = {}, two = {};
+    Object.values(at).forEach((arr) => { if (arr.length === 2 && arr[0] === arr[1]) two[arr[0]] = (two[arr[0]] || 0) + 1; else arr.forEach((m) => { one[m] = (one[m] || 0) + 1; }); });
+    Object.keys(one).sort((a, b) => a - b).forEach((m) => add('f' + m, `Наконечник НШВИ ${String(m).replace('.', ',')} мм²`, Math.ceil(one[m] * 1.2)));
+    Object.keys(two).sort((a, b) => a - b).forEach((m) => add('f2' + m, `Наконечник двойной НШВИ2 ${String(m).replace('.', ',')} мм²`, Math.ceil(two[m] * 1.2)));
+    const nums = P.wires.filter((w) => w.num !== '' && w.num != null).length;
+    if (nums && WN(P).show) add('mk', 'Маркер провода с цифрой (по два на провод)', nums * 2);
     add('enc', `Корпус на ${P.rows * P.mods} модулей (${P.rows} × ${P.mods}), шаг реек ${P.pitch || 134} мм`, 1);
     return Object.values(rows);
   }
@@ -615,5 +756,5 @@
     return errs;
   }
 
-  S.edCore = { railOp, placeBlock, fixCombs, faults, busBad, rcdFaults, ownClass, combGroups, G, PITCHES, PRESETS, PREFIX, COND_COL, FERRULE, SECTIONS, blank, sync, W, H, rowTop, railY, ductTop, devGeo, devH, terms, termNames, busW, busGeo, busSlot, busMaxX, busFree, busPlace, arrangeBuses, balanceBuses, feedCores, feedPt, lineCores, linePt, glandX, endInfo, route, pathLen, keyOf, nets, canWire, guessCond, checks, fromBuilder, bom, groups, nextId, fits, placeShift, placeInsert, resize, autoLine, renameDev, renumber, validate, spec, passPairs };
+  S.edCore = { usedAt, styleOf, exitDir, WN, VIEW, nextWireNum, numberWires, wireLen, WCOL, wireColor, MARK, endName, journal, autoStops, copyDevs, pasteDevs, ductH, pitchOf, railOp, placeBlock, fixCombs, faults, busBad, rcdFaults, ownClass, combGroups, G, PITCHES, PRESETS, PREFIX, COND_COL, FERRULE, SECTIONS, blank, sync, W, H, rowTop, railY, ductTop, devGeo, devH, terms, termNames, busW, busGeo, busSlot, busMaxX, busFree, busPlace, arrangeBuses, balanceBuses, feedCores, feedPt, lineCores, linePt, glandX, endInfo, route, pathLen, keyOf, nets, canWire, guessCond, checks, fromBuilder, bom, groups, nextId, fits, placeShift, placeInsert, resize, autoLine, renameDev, renumber, validate, spec, passPairs };
 })();

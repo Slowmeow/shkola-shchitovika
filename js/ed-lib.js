@@ -21,7 +21,7 @@
 
   const KIND = {
     mcb: 'Автоматы', rcbo: 'Дифавтоматы', rcd: 'УЗО', sw: 'Выключатели нагрузки', spd: 'УЗИП', rn: 'Реле напряжения',
-    km: 'Контакторы', meter: 'Счётчики', dbus: 'Шины N и PE на DIN-рейку', xt: 'Кросс-модули', blank: 'Заглушки'
+    km: 'Контакторы', meter: 'Счётчики', dbus: 'Шины N и PE на DIN-рейку', xt: 'Кросс-модули', blank: 'Заглушки', stop: 'Ограничители на DIN-рейку'
   };
 
   /* w — ширина в модулях: число (на весь аппарат) или функция от числа полюсов */
@@ -66,7 +66,8 @@
     { id: 'gen-meter3', brand: 'gen', series: 'Счётчик 3ф на DIN', kind: 'meter', poles: [3], w: 7, wOpts: [6, 7, 8, 9] },
     { id: 'gen-dbusN', brand: 'gen', series: 'Шина N на DIN-рейку', kind: 'dbus', cond: 'N', poles: [1], w: 4, wOpts: [2, 3, 4, 5, 6, 8], note: 'изолированная шина в корпусе; число зажимов — по паспорту' },
     { id: 'gen-dbusPE', brand: 'gen', series: 'Шина PE на DIN-рейку', kind: 'dbus', cond: 'PE', poles: [1], w: 4, wOpts: [2, 3, 4, 5, 6, 8], note: 'число зажимов — по паспорту' },
-    { id: 'gen-blank', brand: 'gen', series: 'Заглушка', kind: 'blank', poles: [1], w: 1, wOpts: [0.5, 1, 2, 3, 4] }
+    { id: 'gen-blank', brand: 'gen', series: 'Заглушка', kind: 'blank', poles: [1], w: 1, wOpts: [0.5, 1, 2, 3, 4] },
+    { id: 'gen-stop', brand: 'gen', series: 'Ограничитель на DIN-рейку', kind: 'stop', poles: [1], w: 0.5, wOpts: [0.5, 1], note: 'стопор: держит аппараты, чтобы не сползали по рейке; ширину сверь с паспортом' }
   ];
 
   const lsKey = 'shk:edlib';

@@ -252,6 +252,62 @@ const wire = (a, b) => { E.wireStart = null; A.wireClick(a); A.wireClick(b); };
   wire({ feed: 'L1' }, { dev: 'QF5', term: 'L' });
   ok(P.wires.length === 3 && /разные фазы|межфазное/.test(lastMsg()), 'L1 на клемму фазы L2 — отказ', lastMsg());
 }
+/* 9а. маркировка проводов, петли, кабельный журнал, спецификация */
+{
+  const P = fresh(2, 12);
+  A.addDevice('ekf-av6'); A.addDevice('ekf-av6'); A.addDevice('ekf-av6');
+  wire({ feed: 'L' }, { dev: 'QF1', term: 'L' });
+  wire({ dev: 'QF1', term: 'L' }, { dev: 'QF2', term: 'L' });
+  ok(E.P.wires.map((w) => w.num).join() === '1,2', 'новые провода получают номера 1, 2', E.P.wires.map((w) => w.num));
+  const r = K.autoLine(E.P, 'QF2'); A.commit(() => '', true);
+  ok(!r.err && E.P.wires.slice(-3).map((w) => w.num).join() === '3,4,5', 'автолиния нумерует свои провода', E.P.wires.map((w) => w.num));
+  E.sel = { kind: 'wire', id: E.P.wires[1].id };
+  A.setProp('wf', 'num', 1);
+  ok(E.P.wires[1].num === 2 && /уже есть/.test(lastMsg()), 'два провода с одним номером не бывает', lastMsg());
+  A.setProp('pf', 'wnStart', 7); A.commit(() => { K.numberWires(E.P, true); return ''; });
+  ok(Math.min(...E.P.wires.map((w) => w.num)) === 7 && new Set(E.P.wires.map((w) => w.num)).size === E.P.wires.length, 'перенумерация с 7, номера разные', E.P.wires.map((w) => w.num));
+  A.setProp('pf', 'wireStyle', 'loop');
+  const pts = K.route(E.P, E.P.wires[0], 0);
+  ok(pts && pts.bez && pts.length === 25 && K.wireLen(E.P, E.P.wires[0], 0) > 0, 'провод петлёй: кривая и длина', pts && pts.length);
+  ok(!clean(E.P).length && svgOk(E.P), 'щит с петлями рисуется', clean(E.P));
+  const svg = S.edDraw(E.P, { interactive: true }).svg;
+  ok(/>7<\/text>/.test(svg) && /#8a4fc4/.test(svg), 'на проводе кольцо с цифрой 7 фиолетового цвета');
+  A.setProp('pf', 'wireStyle', 'line');
+  ok(K.route(E.P, E.P.wires[0], 0).length === 2, 'прямой провод — две точки');
+  const J = K.journal(E.P);
+  ok(J.length === E.P.wires.length && J[0].num === 7 && /Ввод/.test(J.map((x) => x.from + x.to).join()), 'кабельный журнал: все провода по номерам', J.slice(0, 2));
+  const B = K.bom(E.P);
+  ok(B.some((b) => /НШВИ2/.test(b.name)) && B.some((b) => /Маркер провода/.test(b.name)), 'двойной наконечник и маркеры в спецификации', B.map((b) => b.name));
+  E.sel = { kind: 'dev', id: 'QF3' }; A.setProp('df', 'art', 'TEST-123');
+  ok(K.bom(E.P).some((b) => b.art === 'TEST-123'), 'артикул аппарата попадает в спецификацию');
+  ok(!/NaN|undefined/.test(E.sheetSVG('journal', 'A3', 0) + E.sheetSVG('bom', 'A4', 0)), 'листы журнала и спецификации без NaN');
+}
+/* 9б. свой шаг для каждой рейки, ограничители, копирование */
+{
+  const P = fresh(3, 12);
+  A.addDevice('ekf-av6', { row: 0, x: 2 }); A.addDevice('ekf-av6', { row: 0, x: 3 }); A.addDevice('ekf-av6', { row: 1, x: 0 });
+  wire({ dev: 'QF1', term: 'L>' }, { dev: 'QF2', term: 'L' });
+  const h0 = K.H(E.P);
+  E.sel = null; A.setProp('pf', 'rp0', '175');
+  K.sync(E.P);
+  ok(Math.round(K.railY(1) - K.railY(0)) === 175 && Math.round(K.railY(2) - K.railY(1)) === 134 && Math.round(K.H(E.P) - h0) === 41, 'шаг между 1 и 2 рейкой 175 мм, остальные 134', [K.railY(0), K.railY(1), K.railY(2)]);
+  A.commit(() => K.railOp(E.P, 'insert', 1));
+  ok(E.P.rows === 4 && E.P.pitches.length === 3 && !clean(E.P).length, 'вставка рейки сохраняет шаги', E.P.pitches);
+  A.commit(() => { const r = K.autoStops(E.P); return r.added === 4 ? '' : 'stops ' + JSON.stringify(r); });
+  ok(E.P.devs.filter((d) => d.type === 'stop').length === 4 && !clean(E.P).length, 'по два ограничителя на рейку с аппаратами', T0());
+  const again = K.autoStops(JSON.parse(JSON.stringify(E.P)));
+  ok(again.added === 0, 'второй раз ограничители не дублируются', again);
+  ok(K.bom(E.P).some((b) => /Ограничитель/.test(b.name) && b.qty === 4), 'ограничители в спецификации');
+  A.setSel(['QF1', 'QF2']); A.copySel(false);
+  const n0 = E.P.devs.length, w0 = E.P.wires.length;
+  A.paste();
+  ok(E.P.devs.length === n0 + 2 && E.P.wires.length === w0 + 1 && !clean(E.P).length && !K.faults(E.P).length, 'вставка двух автоматов с проводом между ними', T0());
+  const nw = E.P.wires[E.P.wires.length - 1];
+  ok(nw.a.dev !== 'QF1' && nw.b.dev !== 'QF2' && E.P.devs.some((d) => d.id === nw.a.dev), 'провод вставлен между новыми аппаратами', nw);
+  ok(new Set(E.P.wires.map((w) => w.num)).size === E.P.wires.length, 'у вставленного провода свой номер');
+  E.sel = { kind: 'wire', id: E.P.wires[0].id };
+  ok(/Вставить/.test(A.ctxHTML('empty')) && /Петлёй/.test(A.ctxHTML('wire')) && /Вывести линию/.test((A.setSel(['QF1']), A.ctxHTML('dev'))), 'контекстное меню собирается');
+}
 /* 10. импорт всех разборов и автолиния не портят модель */
 Object.keys(S.guideCfgs || {}).forEach((id) => {
   const P = K.fromBuilder(S.engine.build(S.guideCfgs[id](S.engine.newLine)), 'iek');
@@ -308,7 +364,15 @@ for (let round = 0; round < Math.ceil(N / 150); round++) {
       else if (op < 0.95) A.redo();
       else if (op < 0.955) A.commit(() => { K.renumber(P); return ''; });
       else if (op < 0.96) A.commit(() => K.railOp(P, pick(['insert', 'remove', 'swap']), Math.floor(rnd() * P.rows)));
-      else if (op < 0.97) A.commit(() => { K.arrangeBuses(P); K.balanceBuses(P); return ''; });
+      else if (op < 0.965) A.commit(() => { K.arrangeBuses(P); K.balanceBuses(P); return ''; });
+      else if (op < 0.97) {
+        const r2 = rnd();
+        if (r2 < 0.3 && P.devs.length) { A.setSel(P.devs.filter(() => rnd() < 0.3).map((d) => d.id).slice(0, 4)); if (E.sel) { A.copySel(rnd() < 0.3); A.paste(); } }
+        else if (r2 < 0.5) A.commit(() => { K.autoStops(P); return ''; });
+        else if (r2 < 0.7) { E.sel = null; A.setProp('pf', 'rp' + Math.floor(rnd() * Math.max(1, P.rows - 1)), String(pick([125, 134, 150, 175, 200]))); }
+        else if (r2 < 0.85) { E.sel = null; A.setProp('pf', 'wireStyle', pick(['duct', 'loop', 'line'])); }
+        else if (P.wires.length) { const w = pick(P.wires); E.sel = { kind: 'wire', id: w.id }; const k = pick(['style', 'num', 'color', 'slack']); A.setProp('wf', k, { style: pick(['', 'duct', 'loop', 'line']), num: Math.floor(rnd() * 30), color: pick(['', 'black', 'blue', 'yg']), slack: pick(['', 0, 10, 30]) }[k]); }
+      }
       else {
         /* свойства из правой панели */
         const r = rnd();
