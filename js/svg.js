@@ -75,6 +75,71 @@
   sym.sw = (x, y, h, o) => sym.contact(x, y, h, 'qs', o);
   sym.swd = (x, y, h, o) => sym.contact(x, y, h, 'qsw', o);
   sym.km = (x, y, h, o) => sym.contact(x, y, h, 'km', o);
+  // катушка с дополнительным полем слева (ГОСТ 2.756-76, табл. 1): 'on' — замедление при срабатывании (крест в поле),
+  // 'off' — замедление при отпускании (поле с диагональю и залитым треугольником), 'th' — воспринимающая часть электротеплового реле, иначе — текст в поле
+  sym.coilX = (x, y, kind, label = '', o = {}) => {
+    const s = o.s || 'var(--ink)', w = 30, h = 14, f = 12;
+    let g = V.ln(x, y - h / 2 - 8, x, y - h / 2, { s }) + V.ln(x, y + h / 2, x, y + h / 2 + 8, { s });
+    if (kind === 'th') return g + V.rc(x - 10, y - h / 2, 20, h, { s, f: 'var(--surface)' }) + V.pa(`M${x - 10} ${y + 3} H${x - 3} V${y - 3} H${x + 3} V${y + 3} H${x + 10}`, { s, w: 1.3 }) + (label ? V.tx(x + 14, y + 4, label, { size: 9.5, fam: V.mono, wt: 600 }) : '');
+    const x0 = x - w / 2 + 2;
+    g += V.rc(x0, y - h / 2, w, h, { s, f: 'var(--surface)' }) + V.rc(x0 - f, y - h / 2, f, h, { s, f: 'var(--surface)' });
+    if (kind === 'on') g += V.ln(x0 - f, y - h / 2, x0, y + h / 2, { s, w: 1.2 }) + V.ln(x0 - f, y + h / 2, x0, y - h / 2, { s, w: 1.2 });
+    else if (kind === 'off') g += V.pa(`M${x0 - f} ${y + h / 2} L${x0} ${y - h / 2} L${x0} ${y + h / 2} Z`, { s, w: 1.2, f: s });
+    else if (kind) g += V.tx(x0 - f / 2, y + 3.5, kind, { a: 'middle', size: 8, fam: V.mono, wt: 700 });
+    return g + (label ? V.tx(x0 + w / 2, y + 3.5, label, { a: 'middle', size: 9, fam: V.mono, wt: 600 }) : '');
+  };
+  // контакт замыкающий с замедлением при срабатывании (ГОСТ 2.755-87, табл. 2, п. 15): дуга на подвижной части, замедление — при движении от дуги к её центру
+  sym.noDelay = (x, y, h, o = {}) => {
+    const s = o.s || 'var(--ink)';
+    const a = y + h * 0.36, b = y + h * 0.64, mx = x - h * 0.1, my = (a + b) / 2;
+    return sym.contact(x, y, h, '', o) + V.ln(mx, my - 1.5, mx - 9, my - 1.5, { s, w: 1.2 }) + V.ln(mx, my + 1.5, mx - 9, my + 1.5, { s, w: 1.2 }) + V.pa(`M${mx - 9} ${my - 6} A6 6 0 0 0 ${mx - 9} ${my + 6}`, { s, w: 1.3 });
+  };
+  // кнопка: контакт и нажимной привод (знак «E») на линии механической связи; nc — размыкающая
+  sym.button = (x, y, h, nc, o = {}) => {
+    const s = o.s || 'var(--ink)';
+    const a = y + h * 0.36, b = y + h * 0.64, mx = x - h * 0.1, my = (a + b) / 2;
+    let g = V.ln(x, y, x, a, { s }) + V.ln(x, b, x, y + h, { s });
+    if (nc) g += V.ln(x, a, x - h * 0.24, a, { s }) + V.ln(x, b, x - h * 0.28, a - 3, { s });
+    else g += V.ln(x, b, x - h * 0.2, a + 1.5, { s });
+    const ex = mx - 18;
+    return g + V.ln(mx, my, ex, my, { s, w: 1.2, d: '3 2.5' }) + V.pa(`M${ex + 2} ${my - 6} H${ex - 3} V${my + 6} H${ex + 2} M${ex - 3} ${my} H${ex}`, { s, w: 1.4 });
+  };
+  // сигнальная лампа с кодом цвета по ГОСТ 2.732-68 (C2 — красный, C5 — зелёный…)
+  sym.lampC = (x, y, code, o = {}) => sym.lamp(x, y, 9, o) + (code ? V.tx(x + 12, y - 6, code, { size: 9, fam: V.mono, wt: 700 }) : '');
+  // трансформатор тока (ГОСТ 2.723-68, табл., п. 30): первичная цепь проходит через окружность, выводы вторичной обмотки — вправо
+  sym.ta = (x, y, h, o = {}) => {
+    const s = o.s || 'var(--ink)', c = y + h / 2, r = 8;
+    return V.ln(x, y, x, y + h, { s }) + V.ci(x, y + 4, 2.2, { s: null, f: s }) + V.ci(x, y + h - 4, 2.2, { s: null, f: s }) + V.ci(x, c, r, { s }) + V.ln(x + r, c - 2.5, x + r + 12, c - 2.5, { s }) + V.ln(x + r, c + 2.5, x + r + 12, c + 2.5, { s });
+  };
+  // показывающий прибор (ГОСТ 2.729-68): окружность с буквой величины
+  sym.gauge = (x, y, letter, o = {}) => V.ci(x, y, 11, { s: o.s || 'var(--ink)', f: 'var(--surface)' }) + V.tx(x, y + 4.5, letter, { a: 'middle', size: 12, wt: 700 });
+  // интегрирующий прибор — счётчик: прямоугольник с полосой сверху (ГОСТ 2.729-68)
+  sym.meterG = (x, y, o = {}) => { const s = o.s || 'var(--ink)'; return V.rc(x - 14, y - 12, 28, 24, { s, f: 'var(--surface)' }) + V.ln(x - 14, y - 6, x + 14, y - 6, { s }) + V.tx(x, y + 8, 'Wh', { a: 'middle', size: 10, wt: 700 }); };
+  // варистор (ГОСТ 2.728-74, табл. 1, п. 14): резистор, перечёркнутый ломаной линией, и буква U
+  sym.varistor = (x, y, h, o = {}) => { const s = o.s || 'var(--ink)'; const c = y + h / 2; return V.ln(x, y, x, y + h, { s }) + V.rc(x - 5, c - 12, 10, 24, { s, f: 'var(--surface)' }) + V.pa(`M${x - 11} ${c + 15} H${x - 6} L${x + 9} ${c - 15}`, { s, w: 1.3 }) + V.tx(x + 10, c + 15, 'U', { size: 9.5, wt: 700 }); };
+  // разрядник, общее обозначение (ГОСТ 2.727-68, табл. 1, п. 2): прямоугольник со стрелкой
+  sym.arrester = (x, y, h, o = {}) => { const s = o.s || 'var(--ink)'; const c = y + h / 2; return V.ln(x, y, x, c - 12, { s }) + V.ln(x, c + 12, x, y + h, { s }) + V.rc(x - 5, c - 12, 10, 24, { s, f: 'var(--surface)' }) + V.ln(x, c - 12, x, c + 4, { s }) + V.pa(`M${x - 3.5} ${c - 1} L${x} ${c + 6} L${x + 3.5} ${c - 1} Z`, { s, f: s, w: 1 }); };
+  // изображения на планах (ГОСТ 21.210-2014, табл. 4–6)
+  sym.planSocket = (x, y, o = {}) => {
+    const s = o.s || 'var(--ink)', r = 6;
+    let g = V.pa(`M${x - r} ${y} A${r} ${r} 0 0 1 ${x + r} ${y} Z`, { s, f: o.ip44 ? s : 'var(--surface)', w: 1.6 }) + V.ln(x, y - r, x, y - r - 6, { s, w: 1.6 });
+    if (o.pe) g += V.ln(x - 5, y - r - 3, x + 5, y - r - 3, { s, w: 1.6 });
+    if (o.hidden) g += V.ln(x, y, x, y - r, { s, w: 1.4 });
+    return g;
+  };
+  sym.planSwitch = (x, y, o = {}) => {
+    const s = o.s || 'var(--ink)', keys = o.keys || 1;
+    let g = V.ci(x, y, 2.8, { s, f: o.ip44 ? s : 'var(--surface)', w: 1.6 });
+    for (let k = 0; k < keys; k++) {
+      const ang = -Math.PI / 4 + (k - (keys - 1) / 2) * 0.45, ex = x + 13 * Math.cos(ang), ey = y + 13 * Math.sin(ang);
+      g += V.ln(x + 2.8 * Math.cos(ang), y + 2.8 * Math.sin(ang), ex, ey, { s, w: 1.6 });
+      const px = -Math.sin(ang), py = Math.cos(ang); // перпендикуляр к линии
+      g += o.hidden ? V.ln(ex - px * 3.5, ey - py * 3.5, ex + px * 3.5, ey + py * 3.5, { s, w: 1.6 }) : V.ln(ex, ey, ex + px * 4, ey + py * 4, { s, w: 1.6 });
+    }
+    return g;
+  };
+  sym.planLamp = (x, y, o = {}) => (o.linear ? V.rc(x - 10, y - 2.5, 20, 5, { s: o.s || 'var(--ink)', f: 'var(--surface)', w: 1.6 }) : V.ci(x, y, 5, { s: o.s || 'var(--ink)', f: 'var(--surface)', w: 1.6 }));
+  sym.planBoard = (x, y, o = {}) => { const s = o.s || 'var(--ink)'; return o.cabinet ? V.rc(x - 9, y - 4, 18, 8, { s: null, f: s }) + V.rc(x - 6, y - 1, 12, 2, { s: null, f: 'var(--surface)' }) : V.rc(x - 9, y - 4, 18, 8, { s: null, f: s }); };
   // защитное заземление — знак заземления в круге (ГОСТ 2.721-74)
   sym.pe = (x, y, o = {}) => { const s = o.s || 'var(--ink)'; return V.ln(x, y - 16, x, y - 4, { s }) + V.ci(x, y + 2, 11, { s }) + V.ln(x - 7, y - 3, x + 7, y - 3, { s }) + V.ln(x - 4.5, y + 1.5, x + 4.5, y + 1.5, { s }) + V.ln(x - 2, y + 6, x + 2, y + 6, { s }); };
   sym.rcd = (x, y, h, o = {}) => {
@@ -943,6 +1008,119 @@
     });
     g.push(V.tx(10, 200, 'Упрощённый вид формы 3 ГОСТ 21.613-2014: значки аппаратов, как правило, не рисуют — данные пишут над линией (п. 6.1.7).', { size: 10, f: 'var(--ink-2)' }));
     return V.svg(W, 208, g.join(''), { label: 'Принципиальная схема распределительной сети по форме 3' });
+  };
+
+  I.symCtrl = () => {
+    const g = [];
+    const lab = (x, y, lines) => g.push(V.tl(x, y, lines, { a: 'middle', size: 9.5, lh: 11.5 }));
+    g.push(V.ln(46, 30, 46, 41) + sym.coil(46, 48, 30, 14, 'KM') + V.ln(46, 55, 46, 66)); lab(46, 90, ['катушка', 'общее']);
+    g.push(sym.coilX(128, 48, 'on', 'KT')); lab(128, 90, ['замедление', 'при срабатывании']);
+    g.push(sym.coilX(212, 48, 'off', 'KT')); lab(212, 90, ['замедление', 'при отпускании']);
+    g.push(sym.coilX(290, 48, 'th', 'KK')); lab(290, 90, ['тепловое', 'реле']);
+    g.push(sym.noDelay(378, 16, 64)); lab(370, 90, ['контакт', 'с замедлением']);
+    g.push(sym.button(70, 112, 60, false)); lab(56, 192, ['кнопка', 'замыкающая']);
+    g.push(sym.button(170, 112, 60, true)); lab(156, 192, ['кнопка', 'размыкающая']);
+    g.push(V.ln(262, 120, 262, 133) + sym.lampC(262, 142, 'C2') + V.ln(262, 151, 262, 164)); lab(262, 192, ['лампа', 'красная']);
+    g.push(V.ln(352, 120, 352, 133) + sym.lampC(352, 142, 'C5') + V.ln(352, 151, 352, 164)); lab(352, 192, ['лампа', 'зелёная']);
+    g.push(V.tx(8, 222, 'Катушки — ГОСТ 2.756-76, контакты и кнопки — ГОСТ 2.755-87, лампы — ГОСТ 2.732-68.', { size: 10, f: 'var(--ink-2)' }));
+    return V.svg(420, 230, g.join(''), { label: 'Значки схем управления' });
+  };
+
+  I.symSpread = () => {
+    const g = [], M2 = M;
+    // силовая цепь
+    g.push(V.tx(70, 12, 'L1', { a: 'middle', size: 10, fam: M2, wt: 700 }));
+    g.push(sym.mcb(70, 18, 50) + V.tx(84, 40, 'QF1', { size: 9.5, fam: M2, wt: 600 }));
+    g.push(sym.km(70, 68, 50) + V.tx(84, 90, 'KM1', { size: 9.5, fam: M2, wt: 700, f: 'var(--accent)' }));
+    g.push(V.ln(70, 118, 70, 136) + sym.motor(70, 150, 14) + V.tx(92, 154, 'M1', { size: 9.5, fam: M2, wt: 600 }));
+    g.push(V.tx(70, 186, 'силовая цепь', { a: 'middle', size: 10, f: 'var(--ink-2)' }));
+    // цепь управления
+    const cx = 250;
+    g.push(V.tx(cx, 12, 'L', { a: 'middle', size: 10, fam: M2, wt: 700 }));
+    g.push(sym.button(cx, 18, 50, true) + V.tx(cx + 10, 40, 'SB1 «Стоп»', { size: 9.5, fam: M2 }));
+    g.push(sym.button(cx, 68, 50, false) + V.tx(cx - 70, 96, 'SB2 «Пуск»', { size: 9.5, fam: M2 }));
+    g.push(V.ln(cx, 68, 320, 68) + V.ln(cx, 118, 320, 118) + sym.contact(320, 68, 50, '') + V.ci(cx, 68, 2.4, { s: null, f: 'var(--ink)' }) + V.ci(cx, 118, 2.4, { s: null, f: 'var(--ink)' }));
+    g.push(V.tx(330, 96, 'KM1:13–14', { size: 9.5, fam: M2, wt: 700, f: 'var(--accent)' }));
+    g.push(V.ln(cx, 118, cx, 135) + sym.coil(cx, 142, 34, 14, 'KM1') + V.ln(cx, 149, cx, 166) + V.tx(cx, 178, 'N', { a: 'middle', size: 10, fam: M2, wt: 700 }));
+    g.push(V.tx(cx + 30, 186, 'цепь управления', { a: 'middle', size: 10, f: 'var(--ink-2)' }));
+    g.push(V.tx(8, 206, 'Катушка KM1 и её контакты — в разных цепях; связывает их обозначение KM1 (ГОСТ 2.702-2011, п. 5.3.14).', { size: 9.5, f: 'var(--ink-2)' }));
+    return V.svg(420, 214, g.join(''), { label: 'Разнесённый способ: катушка и контакты контактора в разных цепях' });
+  };
+
+  I.symLines = () => {
+    const g = [];
+    const lab = (x, lines) => g.push(V.tl(x, 98, lines, { a: 'middle', size: 9.5, lh: 11.5 }));
+    g.push(V.ln(16, 50, 70, 50) + V.ln(43, 22, 43, 78)); lab(43, ['пересечение', 'без соединения']);
+    g.push(V.ln(96, 50, 150, 50) + V.ln(123, 50, 123, 78) + V.ci(123, 50, 3, { s: null, f: 'var(--ink)' })); lab(123, ['соединение', '(точка)']);
+    g.push(V.rc(176, 44, 56, 8, { s: 'var(--ink)', f: 'var(--surface)' }) + V.rc(200, 52, 8, 26, { s: 'var(--ink)', f: 'var(--surface)' })); lab(204, ['шина', 'и ответвление']);
+    g.push(V.ln(256, 50, 312, 50, { w: 1.2, d: '10 3 2 3' })); lab(284, ['PE —', 'штрихпунктир']);
+    g.push(V.ln(336, 50, 404, 50, { w: 2.4 }) + V.ln(364, 58, 376, 42) + V.tx(380, 40, '3', { size: 11, wt: 700 })); lab(370, ['три провода', 'одной линией']);
+    g.push(V.tx(8, 138, 'ГОСТ 2.721-74: линии электрической связи, шины, ответвления; PE допускается тонкой штрихпунктирной линией.', { size: 9.5, f: 'var(--ink-2)' }));
+    return V.svg(420, 146, g.join(''), { label: 'Линии, соединения и шины на схемах' });
+  };
+
+  I.symWireNum = () => {
+    const g = [], x = 110, n = 230;
+    const seg = (y1, y2, t) => { g.push(V.ln(x, y1, x, y2)); g.push(V.tx(x - 10, (y1 + y2) / 2 + 4, t, { a: 'end', size: 11, fam: M, wt: 700, f: 'var(--accent)' })); };
+    seg(14, 30, 'L1'); g.push(sym.mcb(x, 30, 44) + V.tx(x + 12, 52, 'QF1', { size: 9.5, fam: M }));
+    seg(74, 92, 'L11'); g.push(sym.km(x, 92, 44) + V.tx(x + 12, 114, 'KM1', { size: 9.5, fam: M }));
+    seg(136, 152, 'L12'); g.push(sym.heater(x, 164, 30, 12) + V.tx(x + 20, 168, 'EK1', { size: 9.5, fam: M }));
+    g.push(V.ln(x, 170, x, 190) + V.ln(x, 190, n, 190) + V.ln(n, 190, n, 14) + V.tx(n + 8, 104, 'N', { size: 11, fam: M, wt: 700, f: 'var(--accent)' }));
+    g.push(V.tl(258, 40, ['Участки, разделённые', 'контактами, имеют разные', 'номера; через клемму', 'номер не меняется.', '', 'ГОСТ 2.709-89,', 'пп. 5.3, 5.4, 5.7'], { size: 10, lh: 13, f: 'var(--ink-2)' }));
+    return V.svg(420, 200, g.join(''), { label: 'Обозначение участков цепи' });
+  };
+
+  I.symRare = () => {
+    const g = [];
+    const it = [[(x) => sym.ta(x, 14, 76), 'TA', ['трансформатор', 'тока']], [(x) => V.ln(x, 14, x, 41) + sym.gauge(x, 52, 'A') + V.ln(x, 63, x, 90), 'PA', ['амперметр']],
+      [(x) => V.ln(x, 14, x, 41) + sym.gauge(x, 52, 'V') + V.ln(x, 63, x, 90), 'PV', ['вольтметр']], [(x) => V.ln(x, 14, x, 40) + sym.meterG(x, 52) + V.ln(x, 64, x, 90), 'PI', ['счётчик', 'активной энергии']],
+      [(x) => sym.varistor(x, 14, 76), 'RU', ['варистор']], [(x) => sym.arrester(x, 14, 76), 'FV', ['разрядник']]];
+    it.forEach(([f, code, name], i) => {
+      const x = 34 + i * 70;
+      g.push(f(x));
+      g.push(V.tx(x, 108, code, { a: 'middle', size: 12, fam: M, wt: 700 }));
+      g.push(V.tl(x, 122, name, { a: 'middle', size: 9.5, lh: 11.5 }));
+    });
+    g.push(V.tx(8, 158, 'ГОСТ 2.723-68, 2.729-68, 2.728-74, 2.727-68; коды — ГОСТ 2.710-81.', { size: 10, f: 'var(--ink-2)' }));
+    return V.svg(420, 166, g.join(''), { label: 'Трансформатор тока, приборы, варистор и разрядник' });
+  };
+
+  I.symPlan = () => {
+    const g = [];
+    const cell = (i, row, draw, lines) => { const x = 36 + i * 70, y = row ? 132 : 44; g.push(draw(x, y)); g.push(V.tl(x, y + 26, lines, { a: 'middle', size: 9, lh: 11 })); };
+    cell(0, 0, (x, y) => sym.planSocket(x, y, { pe: true }), ['розетка с PE', 'открытая']);
+    cell(1, 0, (x, y) => sym.planSocket(x, y, { pe: true, hidden: true }), ['розетка с PE', 'скрытая']);
+    cell(2, 0, (x, y) => sym.planSocket(x, y, { pe: true, ip44: true }), ['розетка с PE', 'IP44']);
+    cell(3, 0, (x, y) => sym.planSwitch(x - 4, y + 2), ['выключатель', 'открытый']);
+    cell(4, 0, (x, y) => sym.planSwitch(x - 4, y + 2, { hidden: true }), ['выключатель', 'скрытый']);
+    cell(5, 0, (x, y) => sym.planSwitch(x - 4, y + 2, { ip44: true }), ['выключатель', 'IP44']);
+    cell(0, 1, (x, y) => sym.planSwitch(x - 4, y + 2, { keys: 2 }), ['выключатель', 'сдвоенный']);
+    cell(1, 1, (x, y) => sym.planLamp(x, y - 3), ['светильник,', 'лампа накаливания']);
+    cell(2, 1, (x, y) => sym.planLamp(x, y - 3, { linear: true }), ['светильник', 'линейный']);
+    cell(3, 1, (x, y) => sym.planBoard(x, y - 3), ['щиток рабочего', 'освещения']);
+    cell(4, 1, (x, y) => sym.planBoard(x, y - 3, { cabinet: true }), ['шкаф', 'распределительный']);
+    g.push(V.tx(8, 196, 'ГОСТ 21.210-2014, табл. 4–6 (рисунок не в масштабе).', { size: 10, f: 'var(--ink-2)' }));
+    return V.svg(430, 204, g.join(''), { label: 'Изображения электрооборудования на планах' });
+  };
+
+  I.symPlanRoom = () => {
+    const g = [], W = 'var(--ink)';
+    // стены с дверным проёмом внизу слева
+    g.push(V.pa('M120 200 H400 V20 H20 V200 H70', { s: W, w: 4 }));
+    g.push(V.pa('M70 200 A50 50 0 0 1 120 150', { s: 'var(--ink-3)', w: 1, d: '3 3' }));
+    // провода — внутри комнаты вдоль стен
+    const wire = (d) => g.push(V.pa(d, { s: 'var(--accent)', w: 1.2 }));
+    const tag = (x, y, t) => g.push(V.tx(x, y, t, { size: 10, fam: M, wt: 700, f: 'var(--accent)' }));
+    wire('M34 172 V100 H204'); wire('M140 176 V100'); g.push(V.ci(140, 100, 2.2, { s: null, f: 'var(--accent)' })); tag(48, 94, 'гр. 1');
+    wire('M42 182 V190 H300 M300 190 H388 V30 H300'); tag(318, 184, 'гр. 2');
+    g.push(sym.planBoard(34, 182) + V.tx(48, 176, 'ЩК', { size: 10, fam: M, wt: 700 }));
+    g.push(sym.planLamp(210, 100));
+    g.push(sym.planSwitch(140, 182, { hidden: true }));
+    g.push(sym.planSocket(300, 197, { pe: true, hidden: true }));
+    g.push(`<g transform="rotate(-90 397 110)">${sym.planSocket(397, 110, { pe: true, hidden: true })}</g>`);
+    g.push(`<g transform="rotate(180 300 23)">${sym.planSocket(300, 23, { pe: true, hidden: true })}</g>`);
+    g.push(V.tl(10, 216, ['Номера групп на плане совпадают с обозначениями на схеме', '(ГОСТ 21.613-2014, п. 6.4.2). Рисунок не в масштабе.'], { size: 9.5, lh: 12, f: 'var(--ink-2)' }));
+    return V.svg(420, 236, g.join(''), { label: 'Пример плана комнаты: щиток, светильник, выключатель, розетки' });
   };
 
   I.leak = () => {

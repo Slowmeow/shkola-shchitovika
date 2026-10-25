@@ -269,6 +269,48 @@
   "w": 628,
   "h": 238
  },
+ "shk-ill-symCtrl.webp": {
+  "kind": "ill",
+  "key": "symCtrl",
+  "w": 628,
+  "h": 284
+ },
+ "shk-ill-symSpread.webp": {
+  "kind": "ill",
+  "key": "symSpread",
+  "w": 628,
+  "h": 268
+ },
+ "shk-ill-symLines.webp": {
+  "kind": "ill",
+  "key": "symLines",
+  "w": 628,
+  "h": 200
+ },
+ "shk-ill-symWireNum.webp": {
+  "kind": "ill",
+  "key": "symWireNum",
+  "w": 628,
+  "h": 254
+ },
+ "shk-ill-symRare.webp": {
+  "kind": "ill",
+  "key": "symRare",
+  "w": 628,
+  "h": 220
+ },
+ "shk-ill-symPlan.webp": {
+  "kind": "ill",
+  "key": "symPlan",
+  "w": 628,
+  "h": 258
+ },
+ "shk-ill-symPlanRoom.webp": {
+  "kind": "ill",
+  "key": "symPlanRoom",
+  "w": 628,
+  "h": 290
+ },
  "shk-ill-leak.webp": {
   "kind": "ill",
   "key": "leak",
