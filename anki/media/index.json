@@ -233,6 +233,42 @@
   "w": 628,
   "h": 290
  },
+ "shk-ill-symTimeline.webp": {
+  "kind": "ill",
+  "key": "symTimeline",
+  "w": 628,
+  "h": 298
+ },
+ "shk-ill-symContacts.webp": {
+  "kind": "ill",
+  "key": "symContacts",
+  "w": 628,
+  "h": 228
+ },
+ "shk-ill-symSigns.webp": {
+  "kind": "ill",
+  "key": "symSigns",
+  "w": 628,
+  "h": 230
+ },
+ "shk-ill-symFamily.webp": {
+  "kind": "ill",
+  "key": "symFamily",
+  "w": 628,
+  "h": 228
+ },
+ "shk-ill-symCode.webp": {
+  "kind": "ill",
+  "key": "symCode",
+  "w": 628,
+  "h": 262
+ },
+ "shk-ill-symForm3.webp": {
+  "kind": "ill",
+  "key": "symForm3",
+  "w": 628,
+  "h": 238
+ },
  "shk-ill-leak.webp": {
   "kind": "ill",
   "key": "leak",
@@ -433,7 +469,7 @@
  },
  "shk-sym-04.webp": {
   "kind": "sym",
-  "key": "Выключатель нагрузки (QS)",
+  "key": "Разъединитель (QS)",
   "w": 95,
   "h": 214
  },
@@ -502,6 +538,30 @@
   "key": "Нагревательный элемент (EK)",
   "w": 164,
   "h": 100
+ },
+ "shk-sym-16.webp": {
+  "kind": "sym",
+  "key": "Выключатель-разъединитель (QS)",
+  "w": 95,
+  "h": 214
+ },
+ "shk-sym-17.webp": {
+  "kind": "sym",
+  "key": "Автоматический выключатель, полный значок по ГОСТ 2.755 (QF)",
+  "w": 94,
+  "h": 214
+ },
+ "shk-sym-18.webp": {
+  "kind": "sym",
+  "key": "Контакт контактора (KM)",
+  "w": 85,
+  "h": 214
+ },
+ "shk-sym-19.webp": {
+  "kind": "sym",
+  "key": "Защитное заземление",
+  "w": 103,
+  "h": 124
  },
  "shk-curve-B.webp": {
   "kind": "graph",

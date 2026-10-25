@@ -271,7 +271,7 @@
   });
   function refSymbols() {
     const codes = S.tables.find((t) => t.id === 'letters');
-    return `<div class="wrap">${head('', 'Обозначения на схемах', 'Условные графические обозначения (УГО) по ГОСТ 2.755, 2.721, 21.614 и буквенные коды по ГОСТ 2.710.')}${refNav('symbols')}
+    return `<div class="wrap">${head('', 'Обозначения на схемах', 'Условные графические обозначения (УГО) по ГОСТ 2.755, 2.721, 2.727 и буквенные коды по ГОСТ 2.710. Изображения на планах — ГОСТ 21.210.')}${refNav('symbols')}
       <div class="grid-2">${S.SYMS.map(([n, f]) => `<div class="card" style="text-align:center">${V.svg(120, 100, f(60), { width: 120, label: n })}<div class="small" style="margin-top:4px">${esc(n)}</div></div>`).join('')}</div>
       <section class="stack-sm" style="margin-top:22px"><h2 class="h3">Буквенные коды</h2>${B.tbl(codes.head, codes.rows, codes.cap)}</section>
       <p style="margin-top:14px">${B.go('game.symbols', 'Потренироваться: «Угадай обозначение»')}</p></div>`;

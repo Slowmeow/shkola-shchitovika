@@ -6,6 +6,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const PAGE = [...fs.readFileSync(path.join(ROOT, 'app.html'), 'utf8').matchAll(/<script src="js\/([\w-]+)\.js"><\/script>/g)].map((m) => m[1]);
 const S = require('./load-app.cjs')(undefined, PAGE.filter((f) => f !== 'ai' && f !== 'app'));
+const { sig, close } = require('./card-sim.cjs');
 
 const SITE = 'https://slowmeow.github.io/shkola-shchitovika/';
 const esc = S.esc;
@@ -48,9 +49,11 @@ const PIC_FIX = {
   'schemes|ladder': 'Как в схеме управления получают «И» и «ИЛИ»?', 'switches|switch1': 'Какой провод разрывает однополюсный выключатель?', 'switches|passthrough': 'Сколько жил между двумя проходными', 'layout|panelfront': 'Как размещают УЗО и его автоматы?',
   'three-panel|comb': 'Как трёхфазная гребёнка раздаёт фазы', 'vdrop|vdrop': 'Бойлер 16 А в 40 м от щита', 'meter|meter1': '', 'meter|meter3': '',
   'sockets|socketwiring': 'Как присоединяют PE к розеткам?', 'rcd|nmix': '',
+  'sym-history|symTimeline': 'Когда и где прошло учредительное заседание МЭК?', 'sym-basic|symSigns': 'Какой знак функции означает выключатель?',
+  'sym-basic|symFamily': 'Как на схеме рисуют УЗО, если в ЕСКД нет его значка?', 'sym-letters|symCode': 'Что означает знак «=» в буквенно-цифровом обозначении?',
   'cables|cablemark': 'Что означает «Г» в марке ВВГ?', 'crimp|ferrule': 'Чем оконцевать гибкую жилу под винтовой зажим?', 'din|din': 'Ширина одного модуля', 'loop|loop': 'Наибольшее сопротивление петли для мгновенного', 'selectivity|selectivity': 'Почему при большом токе КЗ отключаются оба', 'leak|leak': 'Фоновый ток утечки при отсутствии данных',
   'bathroom|bath': 'Зона 1 ванной', 'panel-rules|panelfront': 'Маркировка аппаратов в квартирном щитке', 'assembly|comb': '', 'wiring-rcd|nmix': 'Нуль линии УЗО2 на шине УЗО1', 'tighten|ferrule': 'Почему нельзя лудить концы под винт?',
-  'motors|stardelta': 'Табличка «Δ/Y 230/400 В», сеть 400 В', 'control|ladder': 'Блокировка реверса', 'control|contactor': 'Самоподхват', 'instruments|loop': 'Как тестер измеряет петлю?', 'rcd-test|rcd': 'Неотключающий ток УЗО', 'faults|zerobreak': 'L–PE 230 В, L–N 0'
+  'motors|stardelta': 'Табличка «Δ/Y 230/400 В», сеть 400 В', 'control|ladder': 'Блокировка реверса', 'control|contactor': '', 'instruments|loop': 'Как тестер измеряет петлю?', 'rcd-test|rcd': 'Неотключающий ток УЗО', 'faults|zerobreak': 'L–PE 230 В, L–N 0'
 };
 
 const note = (key, kind, f, tags) => {
@@ -168,6 +171,25 @@ if (restTerms.length) decks.push({ name: `${ROOT_DECK}::90 Словарь (бе�
 const restF = S.formulas.filter((f) => !f._used);
 if (restF.length) decks.push({ name: `${ROOT_DECK}::91 Формулы (без урока)`, desc: 'Формулы справочника.', notes: restF.map((f) => { count('формула'); return note(`formula|${f.id}`, 'formula', { topic: 'Формулы', link: SITE + '#formula.' + f.id, q: `Формула: ${clean(f.name)}`, a: `<div class="fx">${clean(f.f)}</div>`, why: clean(f.about), src: '' }, ['тип::формула']); }) });
 
+// повторы по смыслу (tools/card-sim.cjs, мягкое сравнение close): из двух карточек об одном и том же остаётся более важная — факт или термин урока важнее задачи,
+// задача — важнее правила «Объекта», правило — важнее справочника, справочник — важнее экзамена. Повторы равной важности
+// так не убираются: их показывает node tools/check-cards.cjs, и их исправляют в данных.
+const RANK = { 'факт': 5, 'термин': 5, 'формула': 5, 'задача': 4, 'правило': 3, 'замер': 3, 'этап': 3, 'разбор': 3, 'маркировка': 2, 'оборудование': 2, 'сокращение': 2, 'экзамен': 1 };
+const cmp = [];
+decks.forEach((d) => d.notes.forEach((n) => { const k = (n.tags.find((t) => t.startsWith('тип::')) || '').slice(5); if (k !== 'картинка') cmp.push({ n, k, r: RANK[k] || 0, s: sig(n.fields.q, n.fields.a), deck: d.name }); }));
+const drop = new Map();
+for (let i = 0; i < cmp.length; i++) {
+  for (let j = i + 1; j < cmp.length; j++) {
+    const x = cmp[i], y = cmp[j];
+    if (x.r === y.r || drop.has(x.n) || drop.has(y.n) || !close(x.s, y.s)) continue;
+    const lo = x.r < y.r ? x : y, hi = lo === x ? y : x;
+    drop.set(lo.n, `${lo.deck.split('::').slice(1).join(' → ')} [${lo.k}]: ${text(lo.n.fields.q).slice(0, 90)}\n    оставлено: ${hi.deck.split('::').slice(1).join(' → ')} [${hi.k}]`);
+  }
+}
+decks.forEach((d) => { d.notes = d.notes.filter((n) => !drop.has(n)); });
+for (let i = decks.length - 1; i >= 0; i--) if (!decks[i].notes.length) decks.splice(i, 1);
+if (process.argv.includes('--dups')) console.log([...drop.values()].map((s) => '— ' + s).join('\n'));
+
 // проверка: уникальность ключей, пустые поля
 const keys = new Set();
 let bad = 0;
@@ -182,5 +204,6 @@ fs.mkdirSync(path.join(ROOT, 'anki'), { recursive: true });
 fs.writeFileSync(path.join(ROOT, 'anki', 'cards.json'), JSON.stringify(out, null, 1));
 if (process.argv.includes('--pics')) console.log(figLog.join('\n')); // куда попали рисунки уроков
 const total = decks.reduce((a, d) => a + d.notes.length, 0);
+stats.byType = {}; decks.forEach((d) => d.notes.forEach((n) => count((n.tags.find((t) => t.startsWith('тип::')) || '').slice(5))));
 console.log(`Колод: ${decks.length}, карточек: ${total} (вопрос-ответ ${stats.qa}, пропуски ${stats.cloze}); по типам: ${JSON.stringify(stats.byType)}`);
 if (bad) { console.log('Ошибок: ' + bad); process.exit(1); }

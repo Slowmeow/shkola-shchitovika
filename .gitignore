@@ -7,3 +7,4 @@ anki/cards.json
 node_modules/
 norms/index.json
 norms/report.md
+anki/check-report.md
