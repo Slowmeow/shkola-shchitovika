@@ -388,6 +388,43 @@ const wire = (a, b) => { E.wireStart = null; A.wireClick(a); A.wireClick(b); };
   const P4 = K.template('auto');
   ok(K.resize(P4, 3, 18) === '' && K.cap(P4, 2) <= 18 && !K.validate(P4).length, 'корпус уже — рейки поджаты', K.validate(P4));
 }
+/* 9д. каталог EKF: серии с размерами по чертежам, клеммы JXB с артикулами, корпуса ЩРн и ЩРв */
+{
+  const LB = S.edLib;
+  const W = (sid, p) => LB.widthOf(LB.byId(sid), p);
+  ok(W('ekf-avdt63m', 2) === 1 && W('ekf-ad2', 2) === 4 && W('ekf-ad4', 4) === 7.5 && W('ekf-ad32', 4) === 4.5 && W('ekf-va47100', 3) === 4.5, 'ширины EKF по чертежам каталога');
+  ok(LB.byId('ekf-avdt63n').poles.join() === '2' && LB.byId('ekf-avdt63n').ma.join() === '30,100', 'АВДТ-63 — только 1P+N, 30 и 100 мА');
+  ok(LB.list().filter((x) => x.brand === 'ekf').every((x) => !x.h || (x.h >= 60 && x.h <= 100)), 'высоты EKF в разумных пределах');
+  const P = fresh(3, 24);
+  ['ekf-va4763-6', 'ekf-va4729b', 'ekf-va47100', 'ekf-va47125', 'ekf-avdt63m', 'ekf-ad32', 'ekf-ad2', 'ekf-ad4', 'ekf-dv'].forEach((sid, i) => A.addDevice(sid, { row: Math.floor(i / 3), x: (i % 3) * 8 }));
+  ok(P.devs.length === 9 && !clean(P).length && svgOk(P), 'все новые серии EKF встают на рейки и рисуются', clean(P));
+  const m = P.devs.find((d) => d.sid === 'ekf-avdt63m');
+  ok(K.devGeo(m).h === 83 && K.termNames(m).top.filter(Boolean).length === 2, 'АВДТ-63М: высота 83 мм, фаза и N сверху', K.termNames(m));
+  A.addDevice('ekf-jxb4', { row: 2, x: 22 }); A.addDevice('ekf-jxb4', { row: 2, x: 22.5 });
+  const [j1, j2] = P.devs.filter((d) => d.sid === 'ekf-jxb4');
+  E.sel = { kind: 'dev', id: j2.id }; A.setProp('df', 'cond', 'N');
+  ok(K.artOf(j1) === 'plc-jxb-4/35gy' && K.artOf(P.devs.find((d) => d.id === j2.id)) === 'plc-jxb-4/35b', 'артикул JXB по цвету: серая и синяя', [K.artOf(j1), K.artOf(j2)]);
+  ok(K.artOf(Object.assign({}, j1, { cond: 'PE' })) === '', 'у JXB нет жёлто-зелёной — артикул не подставляется');
+  ok(K.bom(P).some((b) => b.art === 'plc-jxb-4/35b'), 'клемма JXB в спецификации с артикулом');
+  /* корпус по каталогу */
+  const P2 = fresh(2, 12);
+  A.addDevice('ekf-av6', { row: 1, x: 0 });
+  E.sel = null; A.setProp('pf', 'enc', 'ekf-shrn24');
+  ok(E.P.enc && E.P.enc.H === 350 && E.P.enc.B === 300 && E.P.pitch === 130 && E.P.rows === 2 && E.P.mods === 12, 'корпус ЩРн-24: 350 × 300, шаг 130', E.P.enc);
+  ok(K.bom(E.P).some((b) => /ЩРн-24 IP31.*350 × 300 × 120/.test(b.name)), 'корпус в спецификации с габаритами', K.bom(E.P).map((b) => b.name));
+  A.setProp('pf', 'enc', 'ekf-shrn12');
+  ok(E.P.enc.id === 'ekf-shrn24' && E.P.rows === 2 && /не помещается/.test(lastMsg()), 'в однорядный корпус щит с аппаратом на второй рейке не встаёт', lastMsg());
+  A.setProp('pf', 'rows', 3);
+  ok(E.P.rows === 3 && K.checks(E.P).some((c) => c.level === 'err' && /не помещаются в корпус/.test(c.text)), 'рейка сверх корпуса — ошибка в проверках');
+  A.setProp('pf', 'enc', 'ekf-shrv36');
+  ok(E.P.enc.id === 'ekf-shrv36' && E.P.enc.mount === 'встраиваемый' && !K.checks(E.P).some((c) => /не помещаются в корпус/.test(c.text)), 'ЩРв-36: встраиваемый, три рейки помещаются');
+  A.setProp('pf', 'enc', '');
+  ok(!E.P.enc && K.bom(E.P).some((b) => /^Корпус: 3 рейки/.test(b.name)), 'корпус убран — в спецификации свой корпус');
+  const T = K.template('ekf-shrn54');
+  ok(T.rows === 3 && T.mods === 18 && T.pitch === 130 && T.enc.B === 400 && T.ducts === false, 'шаблон ЩРн-54: 3 × 18, ширина 400');
+  ok(K.ENCLOSURES.length === 22 && K.ENCLOSURES.every((e) => Math.floor((e.mods * 17.5) / 5) * 5 <= e.B - 60), 'рейка корпуса короче его ширины');
+  ok(/EKF ЩРн-24/.test(S.edDraw(Object.assign(K.template('ekf-shrn24'), { view: { dims: true } }), {}).svg), 'габариты корпуса подписаны на размерах');
+}
 /* 10. импорт всех разборов и автолиния не портят модель */
 Object.keys(S.guideCfgs || {}).forEach((id) => {
   const P = K.fromBuilder(S.engine.build(S.guideCfgs[id](S.engine.newLine)), 'iek');
@@ -449,7 +486,8 @@ for (let round = 0; round < Math.ceil(N / 150); round++) {
         const r2 = rnd();
         if (r2 < 0.3 && P.devs.length) { A.setSel(P.devs.filter(() => rnd() < 0.3).map((d) => d.id).slice(0, 4)); if (E.sel) { A.copySel(rnd() < 0.3); A.paste(); } }
         else if (r2 < 0.5) A.commit(() => { K.autoStops(P); return ''; });
-        else if (r2 < 0.7) { E.sel = null; A.setProp('pf', 'rp' + Math.floor(rnd() * Math.max(1, P.rows - 1)), String(pick([125, 134, 150, 175, 200]))); }
+        else if (r2 < 0.62) { E.sel = null; A.setProp('pf', 'rp' + Math.floor(rnd() * Math.max(1, P.rows - 1)), String(pick([125, 130, 134, 150, 175, 200]))); }
+        else if (r2 < 0.7) { E.sel = null; A.setProp('pf', 'enc', rnd() < 0.2 ? '' : pick(K.ENCLOSURES).id); }
         else if (r2 < 0.78) { E.sel = null; A.setProp('pf', 'wireStyle', pick(['duct', 'loop', 'line'])); }
         else if (r2 < 0.85) { const k = Math.floor(rnd() * P.rows); A.commit(() => K.setRail(P, k, pick([{ mods: Math.max(2, Math.floor(rnd() * P.mods) + 1), off: Math.floor(rnd() * 4) }, { kind: pick(['din', 'plate']) }, { h: pick([92, 120, 210]) }, { label: 'Отсек' }]))); }
         else if (P.wires.length) { const w = pick(P.wires); E.sel = { kind: 'wire', id: w.id }; const k = pick(['style', 'num', 'color', 'slack']); A.setProp('wf', k, { style: pick(['', 'duct', 'loop', 'line']), num: Math.floor(rnd() * 30), color: pick(['', 'black', 'blue', 'yg']), slack: pick(['', 0, 10, 30]) }[k]); }

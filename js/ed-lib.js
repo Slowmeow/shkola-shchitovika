@@ -1,7 +1,9 @@
 /* Школа щитовика — библиотека аппаратов для редактора щита.
    Ширина серий в модулях (17,5 мм по DIN 43880) — по каталогам производителей; сверена с каталогом panel-workshop.ru/catalog
    (EKF, IEK, ABB) и документацией Schneider Electric Easy9 (EZ9R 2P — 36 мм, 4P — 72 мм; EZ9S 2P — 36 мм).
-   Высота корпуса — 85 мм, у модульных контакторов — 90 мм. Перед заказом сверяй габариты с паспортом изготовителя.
+   EKF дополнительно сверена с «Каталогом для проектировщиков» EKF: номиналы, отключающая способность, ширина и высота по чертежам,
+   клеммы JXB с артикулами (страница каталога — в поле src серии, подробности и найденные в каталоге противоречия — в norms/SOURCES.md).
+   Высота корпуса — 85 мм, если у серии не задана своя (h). Перед заказом сверяй габариты с паспортом изготовителя.
    Свои аппараты пользователя хранятся в localStorage («shk:edlib»). */
 (function () {
   'use strict';
@@ -37,9 +39,16 @@
     'se-ez9f': (d) => (okIn(d) && (d.curve === 'B' || d.curve === 'C') ? `EZ9F${d.curve === 'B' ? 1 : 3}4${d.poles}${pad(d.In, 2)}` : ''),
     'sys-c9f': (d) => (okIn(d) && (d.curve === 'B' || d.curve === 'C') ? `C9F${d.curve === 'B' ? 1 : 3}4${d.poles}${pad(d.In, 2)}` : '')
   };
+  /* клеммы JXB EKF: plc-jxb-<сечение>/35<цвет>, цвет gy серый, b синий (каталог EKF, стр. 92–93); жёлто-зелёной PE в серии нет */
+  const JXB = { 2.5: { amp: 25, cable: '1–2,5 мм²', strip: '10 мм', torque: '0,4 Н·м' }, 4: { amp: 35, cable: '2,5–4 мм²', strip: '10 мм', torque: '0,5 Н·м' },
+    6: { amp: 50, cable: '4–6 мм²', strip: '12 мм', torque: '0,8 Н·м' }, 10: { amp: 70, cable: '6–10 мм²', strip: '12 мм', torque: '1,2 Н·м' },
+    16: { amp: 90, cable: '10–16 мм²', strip: '14 мм', torque: '1,2 Н·м' }, 35: { amp: 125, cable: '16–35 мм²', strip: '18 мм', torque: '2,5 Н·м' } };
+  Object.keys(JXB).forEach((sec) => { ART['ekf-jxb' + sec] = (d) => (d.cond === 'PE' ? '' : `plc-jxb-${sec}/35${d.cond === 'N' ? 'b' : 'gy'}`); });
   /* надпись серии на лицевой панели */
   const FACE = {
-    'ekf-av6': 'AV-6', 'ekf-av10': 'AV-10', 'ekf-va4763': 'ВА 47-63', 'ekf-avdt63n': 'АВДТ-63N', 'ekf-dva6': 'DVA-6', 'ekf-vd100n': 'ВД-100N', 'ekf-vn63n': 'ВН-63N', 'ekf-opvc': 'ОПВ-C', 'ekf-rvb': 'RVb', 'ekf-km': 'КМ',
+    'ekf-av6': 'AV-6', 'ekf-av10': 'AV-10', 'ekf-va4763': 'ВА 47-63', 'ekf-va4763-6': 'ВА 47-63', 'ekf-va4729b': 'ВА 47-29', 'ekf-va47100': 'ВА 47-100', 'ekf-va47125': 'ВА 47-125',
+    'ekf-avdt63n': 'АВДТ-63', 'ekf-avdt63m': 'АВДТ-63М', 'ekf-dva6': 'DVA-6', 'ekf-ad32': 'АД-32', 'ekf-ad2': 'АД-2', 'ekf-ad4': 'АД-4', 'ekf-vd100n': 'ВД-100', 'ekf-dv': 'DV',
+    'ekf-vn63n': 'ВН-63', 'ekf-opvc': 'ОПВ-C', 'ekf-rvb': 'RVb', 'ekf-km': 'КМ',
     'iek-va4729': 'ВА47-29', 'iek-m06n': 'M06N', 'iek-avdt32': 'АВДТ32', 'iek-avdt34': 'АВДТ34', 'iek-vd163': 'ВД1-63', 'iek-vn32': 'ВН-32', 'iek-ops1': 'ОПС1', 'iek-rnd': 'РН-Д', 'iek-km': 'КМ',
     'abb-s200': (d) => 'S20' + d.poles, 'abb-sh200': (d) => 'SH20' + d.poles, 'abb-basicm': 'Basic M', 'abb-ds200': 'DS200', 'abb-f200': (d) => 'F20' + d.poles, 'abb-sd200': (d) => 'SD20' + d.poles, 'abb-ovr': 'OVR',
     'se-ez9f': 'Easy9', 'se-ez9r': 'Easy9', 'se-ez9s': 'Easy9', 'sys-c9f': 'City9 Set'
@@ -48,18 +57,33 @@
   /* w — ширина в модулях: число (на весь аппарат) или функция от числа полюсов */
   const perPole = (p) => p;
   const L = [
-    // EKF
-    { id: 'ekf-av6', brand: 'ekf', series: 'AV-6 AVERES', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(1, 63), curves: ['B', 'C', 'D'], icu: 6, cable: '1–25 мм² (жёсткий), 1–16 мм² (гибкий)' },
-    { id: 'ekf-av10', brand: 'ekf', series: 'AV-10 AVERES', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(1, 63), curves: ['B', 'C', 'D'], icu: 10 },
-    { id: 'ekf-va4763', brand: 'ekf', series: 'ВА 47-63 PROxima', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(0.5, 63), curves: ['B', 'C', 'D'], icu: 4.5, torque: 'не более 2,5 Н·м' },
-    { id: 'ekf-avdt63n', brand: 'ekf', series: 'АВДТ-63N', kind: 'rcbo', poles: [2, 4], w: perPole, In: range(6, 63), curves: ['B', 'C'], ma: [10, 30, 100, 300], rt: ['AC', 'A'] },
-    { id: 'ekf-dva6', brand: 'ekf', series: 'DVA-6 AVERES', kind: 'rcbo', poles: [2], w: 2, In: range(6, 40), curves: ['B', 'C', 'D'], ma: [10, 30, 100, 300], rt: ['AC', 'A'], icu: 6 },
-    { id: 'ekf-vd100n', brand: 'ekf', series: 'ВД-100N', kind: 'rcd', poles: [2, 4], w: perPole, In: range(16, 100), ma: [10, 30, 100, 300], rt: ['AC', 'A'] },
-    { id: 'ekf-vn63n', brand: 'ekf', series: 'ВН-63N', kind: 'sw', poles: [1, 2, 3, 4], w: perPole, In: range(16, 63) },
-    { id: 'ekf-opvc', brand: 'ekf', series: 'ОПВ-C', kind: 'spd', poles: [1, 2, 3, 4], w: perPole, cls: 'T2' },
+    // EKF — по «Каталогу для проектировщиков» EKF; ширина и высота — по чертежам каталога
+    { id: 'ekf-av6', brand: 'ekf', series: 'AV-6 AVERES', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(1, 63), curves: ['B', 'C', 'D'], icu: 6, elc: 3, h: 81, cable: '1–25 мм² (жёсткий), 1–16 мм² (гибкий)', src: 'каталог EKF для проектировщиков, стр. 8–9' },
+    { id: 'ekf-av10', brand: 'ekf', series: 'AV-10 AVERES', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(1, 63), curves: ['B', 'C', 'D'], icu: 10, elc: 3, h: 81, src: 'каталог EKF для проектировщиков, стр. 8–9' },
+    { id: 'ekf-va4763', brand: 'ekf', series: 'ВА 47-63 4,5 кА PROxima', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(0.5, 63), curves: ['B', 'C', 'D'], icu: 4.5, h: 80, cable: '1–25 мм²', strip: '12 мм', comb: 'PIN (штырь)', torque: 'не более 2,5 Н·м', src: 'каталог EKF для проектировщиков, стр. 6–7' },
+    { id: 'ekf-va4763-6', brand: 'ekf', series: 'ВА 47-63 6 кА PROxima', kind: 'mcb', poles: [1, 2, 3], w: perPole, In: range(6, 63), curves: ['B', 'C', 'D'], icu: 6, h: 80, strip: '12 мм', comb: 'PIN (штырь) или FORK (вилка)', src: 'каталог EKF для проектировщиков, стр. 6–7' },
+    { id: 'ekf-va4729b', brand: 'ekf', series: 'ВА 47-29 Basic', kind: 'mcb', poles: [1, 2, 3], w: perPole, In: range(6, 63), curves: ['B', 'C'], icu: 4.5, h: 80, cable: '1–25 мм²', strip: '12 мм', comb: 'PIN (штырь)', src: 'каталог EKF для проектировщиков, стр. 6–7' },
+    { id: 'ekf-va47100', brand: 'ekf', series: 'ВА 47-100 PROxima', kind: 'mcb', poles: [1, 2, 3, 4], w: (p) => p * 1.5, In: range(10, 125), curves: ['C', 'D'], icu: 10, elc: 3, h: 83, cable: 'до 35 мм²', note: 'полюс шириной 27 мм — полтора модуля', src: 'каталог EKF для проектировщиков, стр. 10–11' },
+    { id: 'ekf-va47125', brand: 'ekf', series: 'ВА 47-125 PROxima', kind: 'mcb', poles: [1, 2, 3, 4], w: (p) => p * 1.5, In: range(80, 125), curves: ['C', 'D'], icu: 15, elc: 3, h: 83, cable: 'до 50 мм²', note: 'полюс шириной 27 мм — полтора модуля', src: 'каталог EKF для проектировщиков, стр. 10–11' },
+    { id: 'ekf-avdt63n', brand: 'ekf', series: 'АВДТ-63 PROxima', kind: 'rcbo', poles: [2], w: 2, In: range(6, 63), curves: ['C'], ma: [30, 100], rt: ['A'], icu: 6, h: 81, cable: '1–16 мм²', comb: 'FORK (вилка)', note: 'только 1P+N', src: 'каталог EKF для проектировщиков, стр. 16–17' },
+    { id: 'ekf-avdt63m', brand: 'ekf', series: 'АВДТ-63М PROxima', kind: 'rcbo', poles: [2], w: 1, In: range(6, 32), curves: ['C'], ma: [10, 30], rt: ['AC'], icu: 6, h: 83, cable: '1–10 мм²', note: '1P+N в корпусе шириной один модуль', src: 'каталог EKF для проектировщиков, стр. 16–17' },
+    { id: 'ekf-dva6', brand: 'ekf', series: 'DVA-6 AVERES', kind: 'rcbo', poles: [2], w: 2, In: range(6, 40), curves: ['B', 'C', 'D'], ma: [10, 30, 100, 300], rt: ['AC', 'A'], icu: 6, h: 81, comb: 'PIN (штырь) или FORK (вилка)', note: 'номиналы — по panel-workshop.ru: таблица на стр. 14 каталога EKF противоречит фото аппарата', src: 'каталог EKF для проектировщиков, стр. 14–15 (размеры)' },
+    { id: 'ekf-ad32', brand: 'ekf', series: 'АД-32 PROxima', kind: 'rcbo', poles: [2, 4], w: (p) => (p > 2 ? 4.5 : 2), In: range(16, 63), curves: ['C'], ma: [10, 30, 100], rt: ['AC', 'A'], icu: 4.5, h: 80, cable: '1–25 мм²', note: '3P+N по чертежу 80 мм — 4,5 модуля; номиналы выше 63 А из таблицы каталога не взяты — она совпадает с таблицей УЗО', src: 'каталог EKF для проектировщиков, стр. 14–15' },
+    { id: 'ekf-ad2', brand: 'ekf', series: 'АД-2 PROxima', kind: 'rcbo', poles: [2], w: 4, In: range(16, 63), curves: ['C'], ma: [30, 100], rt: ['AC'], icu: 4.5, h: 92, cable: '1–25 мм²', note: 'по чертежу 71 мм — 4 модуля', src: 'каталог EKF для проектировщиков, стр. 14–15' },
+    { id: 'ekf-ad4', brand: 'ekf', series: 'АД-4 PROxima', kind: 'rcbo', poles: [4], w: 7.5, In: range(16, 63), curves: ['C'], ma: [30, 100], rt: ['AC'], icu: 4.5, h: 92, cable: '1–25 мм²', note: 'по чертежу 134 мм — 7,5 модуля', src: 'каталог EKF для проектировщиков, стр. 14–15' },
+    { id: 'ekf-vd100n', brand: 'ekf', series: 'ВД-100 PROxima', kind: 'rcd', poles: [2, 4], w: perPole, In: range(16, 100), ma: [10, 30, 100], rt: ['AC', 'A', 'S'], h: 82, cable: '1–25 мм²', src: 'каталог EKF для проектировщиков, стр. 12–13' },
+    { id: 'ekf-dv', brand: 'ekf', series: 'DV AVERES', kind: 'rcd', poles: [2, 4], w: perPole, In: range(25, 100), ma: [30, 100, 300, 500], rt: ['AC', 'A', 'S', 'G'], h: 81, cable: '1–25 мм²', src: 'каталог EKF для проектировщиков, стр. 12–13' },
+    { id: 'ekf-vn63n', brand: 'ekf', series: 'ВН-63 PROxima', kind: 'sw', poles: [1, 2, 3, 4], w: perPole, In: range(16, 63), h: 80, src: 'каталог EKF для проектировщиков, стр. 20–21' },
+    { id: 'ekf-opvc', brand: 'ekf', series: 'ОПВ-C', kind: 'spd', poles: [1, 2, 3, 4], w: perPole, cls: 'T2', h: 90, cable: '6–16 мм²', src: 'каталог EKF для проектировщиков, стр. 24–25' },
     { id: 'ekf-rvb', brand: 'ekf', series: 'RVb', kind: 'rn', poles: [1], w: 2, In: [40, 50, 63] },
     { id: 'ekf-km', brand: 'ekf', series: 'КМ AVERES', kind: 'km', poles: [2, 4], w: (p) => (p > 2 ? 2 : 1), In: [20, 25, 40, 63], h: 90 },
     { id: 'ekf-cm', brand: 'ekf', series: 'Кросс-модуль', kind: 'xt', poles: [2, 4], w: (p) => (p > 2 ? 8 : 4.5), In: [100, 125] },
+    { id: 'ekf-jxb2.5', brand: 'ekf', series: 'Клемма JXB-2,5/35 PROxima', kind: 'tb', conds: ['', 'N'], poles: [1], w: 0.5, wOpts: [0.5, 1], h: 60, cable: JXB[2.5].cable + ', зачистка ' + JXB[2.5].strip + ', до ' + JXB[2.5].amp + ' А', torque: JXB[2.5].torque, note: 'цвета серый, синий, жёлтый, зелёный, красный; ширины в каталоге нет — в редакторе условная', src: 'каталог EKF для проектировщиков, стр. 92–93' },
+    { id: 'ekf-jxb4', brand: 'ekf', series: 'Клемма JXB-4/35 PROxima', kind: 'tb', conds: ['', 'N'], poles: [1], w: 0.5, wOpts: [0.5, 1], h: 60, cable: JXB[4].cable + ', зачистка ' + JXB[4].strip + ', до ' + JXB[4].amp + ' А', torque: JXB[4].torque, note: 'цвета серый, синий, жёлтый, зелёный, красный; ширины в каталоге нет — в редакторе условная', src: 'каталог EKF для проектировщиков, стр. 92–93' },
+    { id: 'ekf-jxb6', brand: 'ekf', series: 'Клемма JXB-6/35 PROxima', kind: 'tb', conds: ['', 'N'], poles: [1], w: 0.5, wOpts: [0.5, 1], h: 60, cable: JXB[6].cable + ', зачистка ' + JXB[6].strip + ', до ' + JXB[6].amp + ' А', torque: JXB[6].torque, note: 'цвета серый, синий, жёлтый, зелёный, красный; ширины в каталоге нет — в редакторе условная', src: 'каталог EKF для проектировщиков, стр. 92–93' },
+    { id: 'ekf-jxb10', brand: 'ekf', series: 'Клемма JXB-10/35 PROxima', kind: 'tb', conds: ['', 'N'], poles: [1], w: 0.5, wOpts: [0.5, 1], h: 60, cable: JXB[10].cable + ', зачистка ' + JXB[10].strip + ', до ' + JXB[10].amp + ' А', torque: JXB[10].torque, note: 'цвета серый, синий, жёлтый, зелёный, красный; ширины в каталоге нет — в редакторе условная', src: 'каталог EKF для проектировщиков, стр. 92–93' },
+    { id: 'ekf-jxb16', brand: 'ekf', series: 'Клемма JXB-16/35 PROxima', kind: 'tb', conds: ['', 'N'], poles: [1], w: 0.5, wOpts: [0.5, 1], h: 60, cable: JXB[16].cable + ', зачистка ' + JXB[16].strip + ', до ' + JXB[16].amp + ' А', torque: JXB[16].torque, note: 'цвета серый, синий, жёлтый, зелёный, красный; ширины в каталоге нет — в редакторе условная', src: 'каталог EKF для проектировщиков, стр. 92–93' },
+    { id: 'ekf-jxb35', brand: 'ekf', series: 'Клемма JXB-35/35 PROxima', kind: 'tb', conds: ['', 'N'], poles: [1], w: 1, wOpts: [0.5, 1], h: 60, cable: JXB[35].cable + ', зачистка ' + JXB[35].strip + ', до ' + JXB[35].amp + ' А', torque: JXB[35].torque, note: 'цвета серый, синий, жёлтый, зелёный, красный; ширины в каталоге нет — в редакторе условная', src: 'каталог EKF для проектировщиков, стр. 92–93' },
     // IEK
     { id: 'iek-va4729', brand: 'iek', series: 'ВА47-29 KARAT', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(1, 63), curves: ['B', 'C', 'D'], icu: 4.5, cable: 'до 25 мм²' },
     { id: 'iek-m06n', brand: 'iek', series: 'ARMAT M06N', kind: 'mcb', poles: [1, 2, 3, 4], w: perPole, In: range(0.5, 63), curves: ['B', 'C', 'D'], icu: 6 },

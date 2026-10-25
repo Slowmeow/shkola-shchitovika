@@ -91,9 +91,16 @@
       if (d.type === 'rcd' || d.type === 'rcbo') { items.push(['txt', `${d.ma || 30} мА`]); items.push(['box', d.rt || 'AC']); }
       const fs = small ? 1.8 : 2.1, cw = fs * 0.62;
       const wOf = ([k, v]) => v.length * cw + (k === 'box' ? 1.4 : 0);
-      let x0 = cx - (items.reduce((a, it) => a + wOf(it), 0) + Math.max(0, items.length - 1) * 0.9) / 2;
-      items.forEach((it) => { const w0 = wOf(it); if (it[0] === 'box') out.push(r(x0, cy + 16.3, w0, fs + 1.2, 'none', '#30363a', { w: 0.25 })); out.push(t(x0 + w0 / 2, cy + 16.3 + fs + 0.05, it[1], fs, { f: '#30363a', wt: 700 })); x0 += w0 + 0.9; });
-      if (art) out.push(t(cx, cy + 21.6, fit(art, Math.floor(g.w / 0.95)), small ? 1.45 : 1.7, { f: '#4a504c' }));
+      const tot = (arr) => arr.reduce((a, it) => a + wOf(it), 0) + Math.max(0, arr.length - 1) * 0.9;
+      /* узкий аппарат (дифавтомат в один модуль): уставка и тип УЗО — отдельной строкой ниже */
+      const cut = items.findIndex((it) => it[0] === 'txt');
+      const rowsI = tot(items) > g.w - 2 && cut > 0 ? [items.slice(0, cut), items.slice(cut)] : [items];
+      rowsI.forEach((row, ri) => {
+        let x0 = cx - tot(row) / 2;
+        const y0 = cy + 16.3 + ri * (fs + 1.8);
+        row.forEach((it) => { const w0 = wOf(it); if (it[0] === 'box') out.push(r(x0, y0, w0, fs + 1.2, 'none', '#30363a', { w: 0.25 })); out.push(t(x0 + w0 / 2, y0 + fs + 0.05, it[1], fs, { f: '#30363a', wt: 700 })); x0 += w0 + 0.9; });
+      });
+      if (art) out.push(t(cx, cy + 21.6 + (rowsI.length - 1) * (fs + 1.8), fit(art, Math.floor(g.w / 0.95)), small ? 1.45 : 1.7, { f: '#4a504c' }));
       if (d.type === 'rcd' || d.type === 'rcbo') out.push(`<circle cx="${g.x + g.w - 4.2}" cy="${cy - 12.6}" r="2.2" style="fill:#e3b341;stroke:#7a5d10;stroke-width:0.4"/>`, t(g.x + g.w - 4.2, cy - 11.6, 'T', 2.3, { wt: 700 }));
     } else if (d.type === 'rn') {
       out.push(r(g.x + 3, cy - 10, g.w - 6, 10, '#17201b', null, { rx: 1 }), t(cx, cy - 2.4, '230', 6.2, { f: '#7CFC9A', wt: 700 }));
@@ -294,6 +301,8 @@
     }
     const xh = Wd + 19;
     s += line(xh, 0, xh, Hd) + tick(xh, 0) + tick(xh, Hd) + line(Wd + 1, 0, xh + 2, 0) + line(Wd + 1, Hd, xh + 2, Hd) + vtext(xh - 1.6, Hd / 2, `${Math.round(Hd)} мм`);
+    /* настоящий корпус по каталогу: рисунок условный, габариты подписываем отдельно */
+    if (P.enc) s += t(x1, yT - 7, `Корпус ${P.enc.name}: ${P.enc.H} × ${P.enc.B} × ${P.enc.D} мм (В × Ш × Г) по каталогу, рисунок условный`, 3.4, { a: 'end', f: ink, wt: 700 });
     return s;
   }
 

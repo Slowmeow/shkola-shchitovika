@@ -7,7 +7,7 @@
 
   /* ---------- размеры, мм ---------- */
   const G = { MOD: 17.5, ZONE: 92, DUCT: 42, SD: 34, BUSZ: 28, LANES: 11 };
-  const PITCHES = [125, 134, 150, 175]; // расстояние между осями реек, мм
+  const PITCHES = [125, 130, 134, 150, 175]; // расстояние между осями реек, мм (130 — у корпусов ЩРн и ЩРв EKF)
   const PRESETS = [[1, 12], [2, 12], [3, 12], [4, 12], [2, 18], [3, 18], [4, 18], [3, 24], [4, 24], [5, 24], [6, 24]];
   const PREFIX = { tb: 'X', stop: 'ZS', mcb: 'QF', sw: 'QS', rcd: 'QD', rcbo: 'QFD', rn: 'KV', spd: 'FV', meter: 'PI', xt: 'XT', km: 'KM', blank: 'Z', dbus: 'XS' };
   const COND_COL = { L: 'var(--w-l1)', L1: 'var(--w-l1)', L2: 'var(--w-l2)', L3: 'var(--w-l3)', N: 'var(--w-n)', PE: 'var(--w-pe)', PEN: 'var(--w-pe)' };
@@ -344,6 +344,7 @@
     const add = (level, text, ref) => res.push({ level, text, ref: ref || '' });
     const used = P.devs.reduce((s, d) => s + d.w, 0), capAll = [...Array(P.rows).keys()].reduce((s, k) => s + cap(P, k), 0);
     P.devs.forEach((d) => { if (d.row >= P.rows || d.x + d.w > cap(P, d.row) + EPS) add('err', `${d.id} выходит за пределы реек.`); });
+    if (P.enc && (P.rows > P.enc.rows || P.mods > P.enc.mods)) add('err', `Рейки ${P.rows} × ${P.mods} мод. не помещаются в корпус ${P.enc.name} (${P.enc.rows} × ${P.enc.mods} мод.): выбери корпус больше или убери корпус в свойствах щита.`);
     const free = capAll ? (capAll - used) / capAll : 0;
     add(free < 0.15 ? 'warn' : 'ok', `Занято ${S.fmt(used, 1)} из ${capAll} модулей, свободно ${Math.round(free * 100)} %${free < 0.15 ? ' — запаса меньше 15 %, новую линию ставить будет некуда' : ''}.`);
     const per = {}, secs = {};
@@ -683,6 +684,33 @@
     { id: 'light', name: 'Щит освещения: 4 рейки по 24 модуля', note: 'Три фазы, кабель-каналы, много групп.' },
     { id: 'auto', name: 'Щит автоматики на монтажной панели', note: 'Рейки защиты и контакторов, ряд клемм X1, кабель-каналы, PE сбоку.' }
   ];
+  /* корпуса EKF по «Каталогу для проектировщиков», стр. 68 и 71: B — ширина, H — высота, глубина 120 мм; число модулей рейки —
+     по её длине B1 (165 мм — 9, 220 — 12, 275 — 15, 330 — 18), шаг реек H2–H4 — 130 мм. Строки ЩРн-18М, -72, -90 в таблице
+     каталога сведены с ошибками — не взяты. ЩРн-12 IP54: высота по обзору на стр. 68, в таблице ячейка общая с ЩРн-24 IP54. */
+  const ENCLOSURES = [
+    ['shrn9', 'ЩРн-9 IP31', 300, 220, 1, 9], ['shrn12', 'ЩРн-12 IP31', 300, 220, 1, 12], ['shrn15', 'ЩРн-15 IP31', 400, 220, 1, 15],
+    ['shrn18', 'ЩРн-18 IP31 пласт. замок', 300, 350, 2, 9], ['shrn24', 'ЩРн-24 IP31 пласт. замок', 300, 350, 2, 12],
+    ['shrn36', 'ЩРн-36 IP31 пласт. замок', 300, 480, 3, 12], ['shrn48', 'ЩРн-48 IP31 пласт. замок', 300, 610, 4, 12],
+    ['shrn54', 'ЩРн-54 IP31 пласт. замок', 400, 480, 3, 18], ['shrn12b', 'ЩРн-12 с шинами IP31', 300, 220, 1, 12], ['shrn24b', 'ЩРн-24 с шинами IP31', 300, 350, 2, 12],
+    ['shrn12w', 'ЩРн-12 IP54', 310, 265, 1, 12, 'высота по обзору на стр. 68; в таблице на стр. 71 стоит 365 мм в общей ячейке с ЩРн-24 IP54 — сверь с паспортом'],
+    ['shrn24w', 'ЩРн-24 IP54', 310, 365, 2, 12], ['shrn36w', 'ЩРн-36 IP54', 310, 520, 3, 12], ['shrn48w', 'ЩРн-48 IP54', 310, 620, 4, 12],
+    ['shrv9', 'ЩРв-9 IP31', 340, 260, 1, 9], ['shrv12', 'ЩРв-12 IP31', 340, 260, 1, 12], ['shrv18m', 'ЩРв-18М IP31', 440, 260, 1, 18],
+    ['shrv18', 'ЩРв-18 IP31', 340, 390, 2, 9], ['shrv24', 'ЩРв-24 IP31', 340, 390, 2, 12], ['shrv36', 'ЩРв-36 IP31', 340, 520, 3, 12],
+    ['shrv48', 'ЩРв-48 IP31', 340, 650, 4, 12], ['shrv54', 'ЩРв-54 IP31', 440, 520, 3, 18]
+  ].map(([id, name, B, H, rows, mods, warn]) => ({ id: 'ekf-' + id, name, B, H, D: 120, rows, mods, mount: /ЩРв/.test(name) ? 'встраиваемый' : 'навесной', warn: warn || '' }));
+  const encOf = (e) => ({ id: e.id, name: 'EKF ' + e.name, B: e.B, H: e.H, D: e.D, rows: e.rows, mods: e.mods, mount: e.mount, src: 'каталог EKF для проектировщиков, стр. 68, 71' });
+  ENCLOSURES.forEach((e) => TEMPLATES.push({ id: e.id, grp: 'ekf', name: `EKF ${e.name}: ${e.rows} × ${e.mods} мод.`, note: `Корпус ${e.H} × ${e.B} × ${e.D} мм (высота × ширина × глубина), ${e.mount}, сталь. ${e.rows > 1 ? 'Шаг реек 130 мм. ' : ''}По каталогу EKF для проектировщиков.${e.warn ? ' ' + e.warn[0].toUpperCase() + e.warn.slice(1) + '.' : ''}` }));
+  /* поставить щит в корпус по каталогу: рейки и шаг — как у корпуса; аппараты остаются на местах */
+  function setEnclosure(P, id) {
+    if (!id) { delete P.enc; return ''; }
+    const e = ENCLOSURES.find((x) => x.id === id);
+    if (!e) return 'Такого корпуса нет в списке.';
+    const err = resize(P, e.rows, e.mods);
+    if (err) return `В корпус ${e.name} (${e.rows} × ${e.mods} мод.) щит не помещается: ${err}`;
+    P.pitch = 130; delete P.pitches;
+    P.enc = encOf(e);
+    return '';
+  }
   function template(id) {
     const P = blank(2, 12);
     const put = (sid, row, x, opt) => { const d = lib().make(sid, opt || {}); d.id = nextId(P, d.type, d.cond); d.row = row; d.x = x; d.label = (opt && opt.label) || ''; P.devs.push(d); return d; };
@@ -695,17 +723,19 @@
     if (id === 'floor') { P.rows = 3; P.mods = 24; P.feed = { phases: 3, earthing: 'TN-C-S' }; P.rail = [{ kind: 'plate', h: 210, label: 'Учёт квартир' }, { label: 'Автоматы квартир' }, { mods: 12, label: 'Слаботочный отсек' }]; P.buses = [{ id: 'N1', kind: 'N', zone: 'top', x: 4, n: 14 }, { id: 'PE', kind: 'PE', zone: 'left', x: 40, n: 14 }]; [0, 7, 14].forEach((x) => put('gen-meterpl1', 0, x)); }
     if (id === 'garage') { P.rows = 1; P.mods = 12; P.rail = [{ mods: 8, off: 2 }]; P.ducts = false; P.wireStyle = 'loop'; P.buses = []; put('gen-dbusN', 0, 4, { w: 2 }); put('gen-dbusPE', 0, 6, { w: 2 }); }
     if (id === 'light') { P.rows = 4; P.mods = 24; P.feed = { phases: 3, earthing: 'TN-C-S' }; }
+    const enc = ENCLOSURES.find((x) => x.id === id);
+    if (enc) { P.rows = enc.rows; P.mods = enc.mods; P.pitch = 130; P.ducts = false; P.wireStyle = 'loop'; P.enc = encOf(enc); P.name = 'Щит в корпусе EKF ' + enc.name; }
     if (id === 'auto') { P.rows = 3; P.mods = 24; P.feed = { phases: 3, earthing: 'TN-S' }; P.rail = [{ label: 'Ввод и защита' }, { label: 'Контакторы и реле' }, { label: 'Клеммы X1' }]; P.buses = [{ id: 'N1', kind: 'N', zone: 'top', x: 4, n: 12 }, { id: 'PE', kind: 'PE', zone: 'right', x: 40, n: 16 }]; for (let i = 0; i < 10; i++) put(i < 6 ? 'gen-tb' : i < 8 ? 'gen-tbn' : 'gen-tbpe', 2, 2 + i * 0.5); }
     return P;
   }
 
   /* ---------- импорт из конструктора ---------- */
   const BRAND_SID = {
-    ekf: { mcb: 'ekf-av6', rcd: 'ekf-vd100n', rcbo2: 'ekf-dva6', rcbo4: 'ekf-avdt63n', sw: 'ekf-vn63n', spd: 'ekf-opvc', rn: 'ekf-rvb', xt: 'ekf-cm' },
+    ekf: { mcb: 'ekf-av6', rcd: 'ekf-vd100n', rcbo2: 'ekf-dva6', rcbo4: 'ekf-ad32', sw: 'ekf-vn63n', spd: 'ekf-opvc', rn: 'ekf-rvb', xt: 'ekf-cm' },
     iek: { mcb: 'iek-va4729', rcd: 'iek-vd163', rcbo2: 'iek-avdt32', rcbo4: 'iek-avdt34', sw: 'iek-vn32', spd: 'iek-ops1', rn: 'iek-rnd', xt: 'ekf-cm' },
-    abb: { mcb: 'abb-s200', rcd: 'abb-f200', rcbo2: 'abb-ds200', rcbo4: 'ekf-avdt63n', sw: 'abb-sd200', spd: 'abb-ovr', rn: 'ekf-rvb', xt: 'ekf-cm' },
-    sys: { mcb: 'sys-c9f', rcd: 'se-ez9r', rcbo2: 'iek-avdt32', rcbo4: 'ekf-avdt63n', sw: 'se-ez9s', spd: 'ekf-opvc', rn: 'ekf-rvb', xt: 'ekf-cm' },
-    se: { mcb: 'se-ez9f', rcd: 'se-ez9r', rcbo2: 'iek-avdt32', rcbo4: 'ekf-avdt63n', sw: 'se-ez9s', spd: 'ekf-opvc', rn: 'ekf-rvb', xt: 'ekf-cm' }
+    abb: { mcb: 'abb-s200', rcd: 'abb-f200', rcbo2: 'abb-ds200', rcbo4: 'iek-avdt34', sw: 'abb-sd200', spd: 'abb-ovr', rn: 'ekf-rvb', xt: 'ekf-cm' },
+    sys: { mcb: 'sys-c9f', rcd: 'se-ez9r', rcbo2: 'iek-avdt32', rcbo4: 'iek-avdt34', sw: 'se-ez9s', spd: 'ekf-opvc', rn: 'ekf-rvb', xt: 'ekf-cm' },
+    se: { mcb: 'se-ez9f', rcd: 'se-ez9r', rcbo2: 'iek-avdt32', rcbo4: 'iek-avdt34', sw: 'se-ez9s', spd: 'ekf-opvc', rn: 'ekf-rvb', xt: 'ekf-cm' }
   };
   function fromBuilder(R, brand = 'ekf') {
     const cfg = R.cfg || {};
@@ -754,6 +784,8 @@
     const br = (lib().BRANDS[s.brand] || {}).name || '';
     if (d.type === 'dbus') return `Шина ${d.cond || 'N'} на DIN-рейку ${S.fmt(d.w, 1)} мод.`;
     if (d.type === 'stop') return 'Ограничитель на DIN-рейку';
+    /* у серии клемм с выбором цвета (JXB) цвет — в наименовании; у общих клемм он уже в названии серии */
+    if (d.type === 'tb') return [br === 'Общие' || br === 'Мои' ? '' : br, s.series || 'Клемма', s.conds ? (d.cond === 'N' ? 'синяя' : 'серая') : ''].filter(Boolean).join(' ');
     return [br === 'Общие' || br === 'Мои' ? '' : br, s.series || d.type, d.poles ? d.poles + 'P' : '', d.curve ? d.curve + (d.In || '') : d.In ? d.In + ' А' : '', d.ma ? d.ma + ' мА' : '', d.rt ? 'тип ' + d.rt : '', s.icu && (d.type === 'mcb' || d.type === 'rcbo') ? S.fmt(s.icu, 1) + ' кА' : ''].filter(Boolean).join(' ');
   }
   /* перечень элементов: одинаковые аппараты — одной строкой, обозначения подряд сжимаются: QF1–QF3 */
@@ -808,7 +840,8 @@
       Object.keys(dig).sort().forEach((c) => add('mk' + c, `Маркер провода «${c}»`, dig[c]));
     }
     const capAll = [...Array(P.rows).keys()].reduce((s, k) => s + cap(P, k), 0);
-    add('enc', `Корпус: ${P.rows} рейк${P.rows === 1 ? 'а' : P.rows < 5 ? 'и' : ''}, всего ${capAll} модулей, ширина ${P.mods} мод.${P.ducts === false ? ', без кабель-каналов' : ''}`, 1);
+    if (P.enc) add('enc', `Корпус ${P.enc.name}, ${P.enc.mount}, ${P.enc.H} × ${P.enc.B} × ${P.enc.D} мм (В × Ш × Г)`, 1);
+    else add('enc', `Корпус: ${P.rows} рейк${P.rows === 1 ? 'а' : P.rows < 5 ? 'и' : ''}, всего ${capAll} модулей, ширина ${P.mods} мод.${P.ducts === false ? ', без кабель-каналов' : ''}`, 1);
     for (let k = 0; k < P.rows; k++) { const r = rail(P, k); if (r.kind === 'din') add('rail' + r.mods, `DIN-рейка 35 мм, отрезок ${S.fmt(r.mods * G.MOD, 1)} мм (${r.mods} мод.)`, 1); }
     return Object.values(rows);
   }
@@ -863,5 +896,5 @@
     return errs;
   }
 
-  S.edCore = { rail, cap, zoneH, railOff, setRail, vert, TEMPLATES, template, artOf, faceOf, devName, elements, usedAt, styleOf, exitDir, WN, VIEW, nextWireNum, numberWires, wireLen, WCOL, wireColor, MARK, endName, journal, autoStops, copyDevs, pasteDevs, ductH, pitchOf, railOp, placeBlock, fixCombs, faults, busBad, rcdFaults, ownClass, combGroups, G, PITCHES, PRESETS, PREFIX, COND_COL, FERRULE, SECTIONS, blank, sync, W, H, rowTop, railY, ductTop, devGeo, devH, terms, termNames, busW, busGeo, busSlot, busMaxX, busFree, busPlace, arrangeBuses, balanceBuses, feedCores, feedPt, lineCores, linePt, glandX, endInfo, route, pathLen, keyOf, nets, canWire, guessCond, checks, fromBuilder, bom, groups, nextId, fits, placeShift, placeInsert, resize, autoLine, renameDev, renumber, validate, spec, passPairs };
+  S.edCore = { rail, cap, zoneH, railOff, setRail, vert, TEMPLATES, template, ENCLOSURES, setEnclosure, artOf, faceOf, devName, elements, usedAt, styleOf, exitDir, WN, VIEW, nextWireNum, numberWires, wireLen, WCOL, wireColor, MARK, endName, journal, autoStops, copyDevs, pasteDevs, ductH, pitchOf, railOp, placeBlock, fixCombs, faults, busBad, rcdFaults, ownClass, combGroups, G, PITCHES, PRESETS, PREFIX, COND_COL, FERRULE, SECTIONS, blank, sync, W, H, rowTop, railY, ductTop, devGeo, devH, terms, termNames, busW, busGeo, busSlot, busMaxX, busFree, busPlace, arrangeBuses, balanceBuses, feedCores, feedPt, lineCores, linePt, glandX, endInfo, route, pathLen, keyOf, nets, canWire, guessCond, checks, fromBuilder, bom, groups, nextId, fits, placeShift, placeInsert, resize, autoLine, renameDev, renumber, validate, spec, passPairs };
 })();

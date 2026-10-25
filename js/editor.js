@@ -254,7 +254,7 @@ ${kinds.map((k) => `<div class="ed-kind">${esc(L.KIND[k])}</div>${list.filter((s
   /* ---------- свойства ---------- */
   const opt = (arr, cur, fmt) => arr.map((v) => `<option value="${esc(v)}"${String(v) === String(cur) ? ' selected' : ''}>${esc(fmt ? fmt(v) : v)}</option>`).join('');
   const STYLE = { duct: 'по кабель-каналам', loop: 'петлёй напрямую', line: 'прямой линией' };
-  const RPITCH = [125, 134, 150, 175, 200];
+  const RPITCH = [125, 130, 134, 150, 175, 200];
   /* таблица в CSV для Excel: точка с запятой и метка UTF-8, чтобы русские буквы открылись правильно */
   const csv = (head, rows) => '\ufeff' + [head].concat(rows).map((r) => r.map((c) => `"${String(c == null ? '' : c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
   const keysHelp = `<div class="ed-keys"><span class="kbd">←</span> <span class="kbd">→</span> сдвинуть на полмодуля · <span class="kbd">↑</span> <span class="kbd">↓</span> на другую рейку · <span class="kbd">Del</span> удалить · <span class="kbd">Ctrl+D</span> копия · <span class="kbd">Ctrl+Z</span> / <span class="kbd">Ctrl+Y</span> отмена и возврат · <span class="kbd">Esc</span> отменить провод или снять выделение · <span class="kbd">Shift</span>+клик и рамка — несколько аппаратов · <span class="kbd">Ctrl+A</span> все · <span class="kbd">Ctrl+C</span> <span class="kbd">Ctrl+X</span> <span class="kbd">Ctrl+V</span> копировать, вырезать, вставить · правая кнопка — меню · <span class="kbd">Ctrl</span>+колесо — масштаб</div>`;
@@ -270,7 +270,9 @@ ${kinds.map((k) => `<div class="ed-kind">${esc(L.KIND[k])}</div>${list.filter((s
 <label>Название</label><input class="inp" data-pf="name" value="${esc(P.name)}">
 <h4>Корпус и рейки</h4>
 <label>Готовый размер</label><select data-pf="preset"><option value="">${preset ? '' : 'свой размер'}</option>${C.PRESETS.map(([r, m]) => `<option value="${r}x${m}"${preset && preset[0] === r && preset[1] === m ? ' selected' : ''}>${r} × ${m} = ${r * m} модулей</option>`).join('')}</select>
-<div class="g2"><div><label>Реек</label><select data-pf="rows">${opt([1, 2, 3, 4, 5, 6, 7, 8], P.rows)}</select></div><div><label>Модулей на рейке</label><select data-pf="mods">${opt([6, 8, 12, 14, 16, 18, 24, 36], P.mods)}</select></div></div>
+<label>Корпус EKF по каталогу</label><select data-pf="enc"><option value="">${P.enc ? 'без корпуса из каталога' : 'не выбран — свой корпус'}</option>${C.ENCLOSURES.map((e) => `<option value="${e.id}"${P.enc && P.enc.id === e.id ? ' selected' : ''}>${esc(e.name)} — ${e.rows} × ${e.mods} мод., ${e.H} × ${e.B} мм</option>`).join('')}</select>
+${P.enc ? `<p class="small muted" style="margin:2px 0 0">${esc(P.enc.name)}: ${P.enc.H} × ${P.enc.B} × ${P.enc.D} мм (высота × ширина × глубина), ${esc(P.enc.mount)}. Источник: ${esc(P.enc.src)}.</p>` : ''}
+<div class="g2"><div><label>Реек</label><select data-pf="rows">${opt([1, 2, 3, 4, 5, 6, 7, 8], P.rows)}</select></div><div><label>Модулей на рейке</label><select data-pf="mods">${opt([6, 8, 9, 12, 14, 15, 16, 18, 24, 36], P.mods)}</select></div></div>
 <div class="ed-rails">${[...Array(P.rows).keys()].map((k) => { const used = P.devs.filter((d) => d.row === k).reduce((a, d) => a + d.w, 0); return `${k ? `<div class="ed-rail ed-pitch"><span>↕ между ${k} и ${k + 1}</span><select data-pf="rp${k - 1}" title="Расстояние между осями реек, мм">${opt(RPITCH, C.pitchOf(P, k - 1), (v) => `${v} мм`)}</select></div>` : ''}<div class="ed-rail"><span>Рейка ${k + 1} · занято ${S.fmt(used, 1)} из ${P.mods}</span><button type="button" data-rail="insert" data-k="${k}" title="Вставить пустую рейку над этой">+ выше</button>${k + 1 < P.rows ? `<button type="button" data-rail="swap" data-k="${k}" title="Поменять местами с рейкой ниже">⇅</button>` : ''}${used ? '' : `<button type="button" data-rail="remove" data-k="${k}" title="Убрать пустую рейку">×</button>`}<button type="button" data-railedit="${k}" title="Длина, отступ, монтажная панель, высота, подпись">⚙</button></div>`; }).join('')}</div>
 <label>Шаг реек для всех (сверху и снизу — до шин)</label><select data-pf="pitch">${opt(RPITCH, P.pitch || 134, (v) => `${v} мм${v === 134 ? ' (по умолчанию)' : ''}`)}</select>
 <div class="row"><button class="btn sm" type="button" data-act="stops">Ограничители по краям реек</button></div>
@@ -316,8 +318,9 @@ ${s.In ? `<label>Номинальный ток, А</label><select data-df="In">$
 ${curves.length ? `<label>Характеристика</label><select data-df="curve">${opt(curves, d.curve)}</select>` : ''}
 ${s.ma ? `<div class="g2"><div><label>Утечка, мА</label><select data-df="ma">${opt(s.ma, d.ma)}</select></div><div><label>Тип</label><select data-df="rt">${opt(s.rt || ['AC'], d.rt)}</select></div></div>` : ''}
 ${s.wOpts ? `<label>Ширина, модулей</label><select data-df="w">${opt(s.wOpts, d.w)}</select>` : ''}
+${s.conds ? `<label>Проводник (цвет клеммы)</label><select data-df="cond">${opt(s.conds, d.cond || '', (v) => ({ '': 'фаза — серая', N: 'N — синяя', PE: 'PE — жёлто-зелёная' }[v]))}</select>` : ''}
 <div class="ed-kv"><span>Ширина:</span> ${S.fmt(d.w, 1)} мод. (${S.fmt(d.w * C.G.MOD, 1)} мм) · <span>подключено клемм:</span> ${keyed.size + (combed ? 1 : 0)} из ${all.length}</div>
-${s.cable ? `<div class="ed-kv"><span>Клеммы:</span> ${esc(s.cable)}</div>` : ''}${s.torque ? `<div class="ed-kv"><span>Момент затяжки:</span> ${esc(s.torque)}</div>` : ''}${s.note ? `<div class="ed-kv"><span>Примечание:</span> ${esc(s.note)}</div>` : ''}
+${s.cable ? `<div class="ed-kv"><span>Клеммы:</span> ${esc(s.cable)}</div>` : ''}${s.torque ? `<div class="ed-kv"><span>Момент затяжки:</span> ${esc(s.torque)}</div>` : ''}${s.strip ? `<div class="ed-kv"><span>Зачистка:</span> ${esc(s.strip)}</div>` : ''}${s.comb ? `<div class="ed-kv"><span>Гребёнка:</span> ${esc(s.comb)}</div>` : ''}${s.note ? `<div class="ed-kv"><span>Примечание:</span> ${esc(s.note)}</div>` : ''}${s.src ? `<div class="ed-kv"><span>Источник:</span> ${esc(s.src)}</div>` : ''}
 <div class="arrows"><button class="btn sm" type="button" data-move="L" title="Влево на полмодуля">◀</button><button class="btn sm" type="button" data-move="R" title="Вправо на полмодуля">▶</button><button class="btn sm" type="button" data-move="U" title="На рейку выше">▲</button><button class="btn sm" type="button" data-move="D" title="На рейку ниже">▼</button></div>
 <div class="row">${canLine ? `<button class="btn sm primary" type="button" data-act="autoline">${S.icon('cable')}Вывести линию</button>` : ''}${(d.type === 'mcb' || d.type === 'rcbo') && !combed ? `<button class="btn sm" type="button" data-act="comb1">Гребёнка вправо</button>${one && E.P.feed.phases === 3 ? '<button class="btn sm" type="button" data-act="comb3">Гребёнка 3ф вправо</button>' : ''}` : ''}<button class="btn sm" type="button" data-act="dup">${S.icon('copy')}Копия</button><button class="btn sm" type="button" data-act="del">${S.icon('trash')}Удалить</button></div>
 ${canLine ? '<p class="small muted">«Вывести линию» добавит кабель и сам подключит фазу к этому аппарату, нуль — к шине его УЗО (или к своему зажиму N), PE — к шине PE.</p>' : ''}`;
@@ -386,7 +389,7 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
   function newFormHTML() {
     const C = K();
     return `<h3>Новый щит</h3>
-<label>Какой щит</label><select data-new="tpl">${C.TEMPLATES.map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select>
+<label>Какой щит</label><select data-new="tpl"><optgroup label="Типовые щиты">${C.TEMPLATES.filter((t) => !t.grp).map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</optgroup><optgroup label="Корпуса EKF ЩРн и ЩРв (по каталогу)">${C.TEMPLATES.filter((t) => t.grp === 'ekf').map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</optgroup></select>
 <p class="small muted" data-tplnote>${esc(C.TEMPLATES[0].note)}</p>
 <label>Размер корпуса (для пустого щита)</label><select data-new="size">${C.PRESETS.map(([r, m]) => `<option value="${r}x${m}"${r === 2 && m === 12 ? ' selected' : ''}>${r} × ${m} = ${r * m} модулей</option>`).join('')}</select>
 <label>Питание</label><select data-new="phases"><option value="1">Однофазный 230 В</option><option value="3">Трёхфазный 400 В</option></select>
@@ -858,6 +861,7 @@ ${C.styleOf(P, w) === 'duct' ? `<label>Боковой канал</label><select 
       if (k === 'rows') return C.resize(E.P, Number(val), E.P.mods);
       if (k === 'mods') return C.resize(E.P, E.P.rows, Number(val));
       if (k === 'pitch') { E.P.pitch = Number(val); return ''; }
+      if (k === 'enc') return C.setEnclosure(E.P, val);
       if (/^rp\d+$/.test(k)) { const j = Number(k.slice(2)); E.P.pitches = E.P.pitches || []; for (let q = 0; q < E.P.rows - 1; q++) if (!E.P.pitches[q]) E.P.pitches[q] = E.P.pitch || 134; E.P.pitches[j] = Number(val); return ''; }
       if (k === 'wireStyle') { E.P.wireStyle = val; return ''; }
       if (k === 'slack') { E.P.slack = Math.max(0, Math.min(100, Number(val) || 0)); return ''; }
