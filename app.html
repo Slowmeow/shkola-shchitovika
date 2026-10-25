@@ -664,6 +664,15 @@ button.issue{border:0;background:none;width:100%;text-align:left;cursor:pointer}
 .switch[aria-checked="true"]{background:var(--success-em);border-color:var(--success-em)}
 .switch[aria-checked="true"]::after{transform:translateX(18px)}
 .tts-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tts-bar>.btn:not(.primary){min-width:44px;justify-content:center;padding-left:10px;padding-right:10px}
+.tts-bar>.btn.primary{flex:1;justify-content:center;min-width:130px}
+.tts-seek{width:100%;accent-color:var(--accent);margin:2px 0}
+[data-tts-status]:empty{display:none}
+.tts-text{position:relative;max-height:42vh;overflow:auto;border:1px solid var(--border);border-radius:6px;background:var(--bg);padding:10px 12px;font-size:15px;line-height:1.65}
+.tts-text p{margin:0 0 10px}
+.tts-text [data-c]{cursor:pointer;border-radius:3px;transition:background .2s ease}
+.tts-text [data-c]:hover{background:var(--bg-muted)}
+.tts-text [data-c].on{background:color-mix(in srgb,var(--accent) 24%,transparent)}
 .codebox{font-family:var(--font-mono);font-size:12px;word-break:break-all;background:var(--bg-subtle);border:1px solid var(--border-muted);border-radius:6px;padding:10px;max-height:160px;overflow:auto}
 </style>
 
