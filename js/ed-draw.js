@@ -42,6 +42,15 @@
     const K = C();
     const g = K.devGeo(d);
     const sel = o.sel && ((o.sel.kind === 'dev' && o.sel.id === d.id) || (o.sel.kind === 'devs' && o.sel.ids.includes(d.id)));
+    if (d.type === 'tb') {
+      const col = d.cond === 'PE' ? '#e2c94a' : d.cond === 'N' ? '#5b8fe0' : '#c3c8c3';
+      let st2 = r(g.x, g.y, g.w, g.h, col, '#59605b', { rx: 0.8, w: 0.45 });
+      if (d.cond === 'PE') st2 += `<rect x="${g.x}" y="${g.y + g.h / 2 - 6}" width="${g.w}" height="12" style="fill:#2f9b4a"/>`;
+      st2 += t(g.x + g.w / 2, g.y + g.h / 2 + 1.2, d.id, 2.4, { wt: 700, f: '#1d1d1d' });
+      K.terms(d).forEach((tm) => { st2 += screw(tm.x, tm.y); });
+      if (sel) st2 += r(g.x - 1.2, g.y - 1.2, g.w + 2.4, g.h + 2.4, 'none', 'var(--accent)', { rx: 1.5, w: 1.1 });
+      return `<g data-dev="${esc(d.id)}" style="cursor:${o.interactive ? 'grab' : 'default'}"><title>${esc(d.id)} — клемма${d.cond ? ' ' + d.cond : ''}</title>${st2}</g>`;
+    }
     if (d.type === 'stop') {
       const cy0 = K.railY(d.row);
       let st = r(g.x, cy0 - 24, g.w, 48, '#f2b705', '#7a5d10', { rx: 1, w: 0.5 }) + r(g.x + 1, cy0 - 21, g.w - 2, 42, 'none', '#b88a06', { rx: 0.6, w: 0.3 }) + `<circle cx="${g.x + g.w / 2}" cy="${cy0}" r="${Math.min(3, g.w / 2 - 0.8)}" style="fill:#cfd4d1;stroke:#5f6662;stroke-width:0.4"/>`;
@@ -125,16 +134,27 @@
       for (let i = 1; i < n; i++) s += vert ? `<line x1="${x}" y1="${y + i * 9}" x2="${x + 2.4}" y2="${y + i * 9}" style="stroke:#a9b0ab;stroke-width:0.4"/><line x1="${x + w - 2.4}" y1="${y + i * 9}" x2="${x + w}" y2="${y + i * 9}" style="stroke:#a9b0ab;stroke-width:0.4"/>` : `<line x1="${x + i * 9}" y1="${y}" x2="${x + i * 9}" y2="${y + 2.4}" style="stroke:#a9b0ab;stroke-width:0.4"/><line x1="${x + i * 9}" y1="${y + h - 2.4}" x2="${x + i * 9}" y2="${y + h}" style="stroke:#a9b0ab;stroke-width:0.4"/>`;
       return s;
     };
-    out.push(duct(2, G.BUSZ, G.SD - 4, Hd - 2 * G.BUSZ, true), duct(Wd - G.SD + 2, G.BUSZ, G.SD - 4, Hd - 2 * G.BUSZ, true));
-    for (let k = 0; k <= P.rows; k++) out.push(duct(G.SD - 2, K.ductTop(k) + 2, Wd - 2 * G.SD + 4, K.ductH(k) - 4, false));
+    /* кабель-каналы есть не во всех щитах: в пластиковых квартирных провода идут свободно */
+    if (P.ducts !== false) {
+      out.push(duct(2, G.BUSZ, G.SD - 4, Hd - 2 * G.BUSZ, true), duct(Wd - G.SD + 2, G.BUSZ, G.SD - 4, Hd - 2 * G.BUSZ, true));
+      for (let k = 0; k <= P.rows; k++) out.push(duct(G.SD - 2, K.ductTop(k) + 2, Wd - 2 * G.SD + 4, K.ductH(k) - 4, false));
+    }
     for (let i = 0; i < P.rows; i++) {
-      const y = K.railY(i);
-      out.push(r(G.SD - 6, y - 17.5, Wd - 2 * G.SD + 12, 35, 'var(--rail)', '#8c938e', { w: 0.5 }), r(G.SD - 6, y - 4, Wd - 2 * G.SD + 12, 8, '#9aa19c', null));
-      for (let x = G.SD; x < Wd - G.SD; x += 25) out.push(r(x, y - 2.6, 11, 5.2, '#7f8682', null, { rx: 2.6 }));
-      out.push(t(G.SD - 9, y + 1.4, String(i + 1), 4, { f: '#7b827e', wt: 700 }));
-      const freeM = P.mods - P.devs.filter((d) => d.row === i).reduce((s, d) => s + d.w, 0);
-      out.push(t(Wd - G.SD - 1, K.rowTop(i) - 2.2, freeM > 0 ? `свободно ${String(freeM).replace('.', ',')} мод.` : 'рейка заполнена', 3, { a: 'end', f: freeM > 0 ? '#6f7772' : '#b0442c' }));
-      for (let m = 0; m <= P.mods; m++) out.push(`<line x1="${G.SD + m * G.MOD}" y1="${K.rowTop(i) - 0.5}" x2="${G.SD + m * G.MOD}" y2="${K.rowTop(i) + 2.5}" style="stroke:#9aa19c;stroke-width:0.35"/>`);
+      const R = K.rail(P, i), y = K.railY(i), zh = K.zoneH(i);
+      const x0 = G.SD + R.off * G.MOD, x1 = x0 + R.mods * G.MOD;
+      if (R.kind === 'plate') {
+        /* монтажная панель: аппараты на винтах, без DIN-рейки */
+        out.push(r(x0 - 3, K.rowTop(i) + 1, x1 - x0 + 6, zh - 2, '#eceee9', '#9aa19c', { rx: 1.5, w: 0.5 }), `<rect x="${x0 - 3}" y="${K.rowTop(i) + 1}" width="${x1 - x0 + 6}" height="${zh - 2}" rx="1.5" style="fill:none;stroke:#b8bdb6;stroke-width:0.4;stroke-dasharray:3 3"/>`);
+        [[x0 + 1, K.rowTop(i) + 5], [x1 - 1, K.rowTop(i) + 5], [x0 + 1, K.rowTop(i) + zh - 5], [x1 - 1, K.rowTop(i) + zh - 5]].forEach(([cx, cy]) => out.push(`<circle cx="${cx}" cy="${cy}" r="1.2" style="fill:#c3c8c2;stroke:#8c938e;stroke-width:0.3"/>`));
+      } else {
+        out.push(r(x0 - 6, y - 17.5, x1 - x0 + 12, 35, 'var(--rail)', '#8c938e', { w: 0.5 }), r(x0 - 6, y - 4, x1 - x0 + 12, 8, '#9aa19c', null));
+        for (let x = x0; x < x1; x += 25) out.push(r(x, y - 2.6, 11, 5.2, '#7f8682', null, { rx: 2.6 }));
+      }
+      out.push(t(x0 - 9, y + 1.4, String(i + 1), 4, { f: '#7b827e', wt: 700 }));
+      if (R.label) out.push(t(x0, K.rowTop(i) - 2.2, R.label, 3.4, { a: 'start', f: '#3d4340', wt: 700 }));
+      const freeM = R.mods - P.devs.filter((d) => d.row === i).reduce((s2, d) => s2 + d.w, 0);
+      out.push(t(x1 - 1, K.rowTop(i) - 2.2, (R.mods < P.mods ? `рейка ${S.fmt(R.mods * G.MOD, 1)} мм · ` : '') + (freeM > 0 ? `свободно ${String(freeM).replace('.', ',')} мод.` : 'заполнена'), 3, { a: 'end', f: freeM > 0 ? '#6f7772' : '#b0442c' }));
+      for (let m = 0; m <= R.mods; m++) out.push(`<line x1="${x0 + m * G.MOD}" y1="${K.rowTop(i) - 0.5}" x2="${x0 + m * G.MOD}" y2="${K.rowTop(i) + 2.5}" style="stroke:#9aa19c;stroke-width:0.35"/>`);
     }
     return out.join('');
   }
@@ -142,6 +162,16 @@
   function bus(P, b, o) {
     const K = C(), g = K.busGeo(P, b);
     const isPE = b.kind === 'PE';
+    if (g.vertical) {
+      const out2 = [r(g.x - g.h / 2, g.y, g.h, g.w, isPE ? '#c7a43a' : '#c99a5a', '#6e5a2a', { rx: 1, w: 0.5 })];
+      if (isPE) out2.push(`<rect x="${g.x - g.h / 2}" y="${g.y}" width="${g.h}" height="${g.w}" style="fill:none;stroke:var(--w-pe);stroke-width:1.2;stroke-dasharray:4 4"/>`);
+      else out2.push(r(g.x - g.h / 2 - 1.5, g.y - 2.5, g.h + 3, 3, '#2a6cd6', null, { rx: 0.8 }), r(g.x - g.h / 2 - 1.5, g.y + g.w - 0.5, g.h + 3, 3, '#2a6cd6', null, { rx: 0.8 }));
+      for (let k = 0; k < b.n; k++) { const q = K.busSlot(P, b, k); out2.push(screw(q.x, q.y)); }
+      const lx = b.zone === 'left' ? g.x + g.h / 2 + 3.4 : g.x - g.h / 2 - 2;
+      out2.push(`<text transform="translate(${lx} ${g.y + 2}) rotate(90)" style="${F};font-size:3px;font-weight:700;fill:#2b2f2c">${esc(b.id + (isPE ? ' — защитная' : ' — нулевая'))}</text>`);
+      if (o.sel && o.sel.kind === 'bus' && o.sel.id === b.id) out2.push(r(g.x - g.h / 2 - 2, g.y - 2, g.h + 4, g.w + 4, 'none', 'var(--accent)', { rx: 2, w: 1 }));
+      return `<g data-bus="${esc(b.id)}" style="cursor:${o.interactive ? 'grab' : 'default'}">${out2.join('')}</g>`;
+    }
     const out = [r(g.x, g.y - g.h / 2, g.w, g.h, isPE ? '#c7a43a' : '#c99a5a', '#6e5a2a', { rx: 1, w: 0.5 })];
     if (isPE) out.push(`<rect x="${g.x}" y="${g.y - g.h / 2}" width="${g.w}" height="${g.h}" style="fill:none;stroke:var(--w-pe);stroke-width:1.2;stroke-dasharray:4 4"/>`);
     else out.push(r(g.x - 2.5, g.y - g.h / 2 - 1.5, 3, g.h + 3, '#2a6cd6', null, { rx: 0.8 }), r(g.x + g.w - 0.5, g.y - g.h / 2 - 1.5, 3, g.h + 3, '#2a6cd6', null, { rx: 0.8 }));
@@ -256,7 +286,7 @@
     let s = '';
     const x0 = G.SD, x1 = Wd - G.SD, yT = -9;
     s += line(x0, yT, x1, yT) + tick(x0, yT) + tick(x1, yT) + line(x0, yT - 2, x0, 1) + line(x1, yT - 2, x1, 1);
-    s += t((x0 + x1) / 2, yT - 1.4, `рейка ${S.fmt(P.mods * G.MOD, 1)} мм (${P.mods} мод.)`, 3.4, { f: ink });
+    s += t((x0 + x1) / 2, yT - 1.4, `${S.fmt(P.mods * G.MOD, 1)} мм (${P.mods} мод.) — самая длинная рейка`, 3.4, { f: ink });
     const xr = Wd + 9;
     for (let k = 0; k + 1 < P.rows; k++) {
       const ya = K.railY(k), yb = K.railY(k + 1);
@@ -323,11 +353,12 @@
     const Hd = K.H(P);
     const body = [];
     if (o.ghost) {
-      const gh = o.ghost, x = K.G.SD + gh.x * K.G.MOD, y = K.railY(gh.row) - 44;
-      body.push(r(x - 0.6, y, gh.w * K.G.MOD + 1.2, 88, gh.ok ? 'rgba(31,136,61,.14)' : 'rgba(209,36,47,.16)', gh.ok ? 'var(--success)' : 'var(--danger)', { rx: 2, w: 1 }));
-      if (gh.ok && gh.snap) body.push(`<line x1="${x}" y1="${y - 4}" x2="${x}" y2="${y + 92}" style="stroke:var(--success);stroke-width:0.8;stroke-dasharray:2 2"/>`);
+      const gh = o.ghost, zh = K.zoneH(gh.row), x = K.G.SD + (K.railOff(gh.row) + gh.x) * K.G.MOD, y = K.railY(gh.row) - zh / 2 + 2;
+      body.push(r(x - 0.6, y, gh.w * K.G.MOD + 1.2, zh - 4, gh.ok ? 'rgba(31,136,61,.14)' : 'rgba(209,36,47,.16)', gh.ok ? 'var(--success)' : 'var(--danger)', { rx: 2, w: 1 }));
+      if (gh.ok && gh.snap) body.push(`<line x1="${x}" y1="${y - 4}" x2="${x}" y2="${y + zh}" style="stroke:var(--success);stroke-width:0.8;stroke-dasharray:2 2"/>`);
     }
-    if (o.busGhost) { const bg = o.busGhost; body.push(r(K.G.SD + bg.x - 1, (bg.zone === 'top' ? K.G.BUSZ / 2 : Hd - K.G.BUSZ / 2) - 6.5, bg.w + 2, 13, bg.ok ? 'rgba(31,136,61,.14)' : 'rgba(209,36,47,.16)', bg.ok ? 'var(--success)' : 'var(--danger)', { rx: 2, w: 0.8 })); }
+    if (o.busGhost && K.vert(o.busGhost.zone)) { const bg = o.busGhost, gx = bg.zone === 'left' ? K.G.SD / 2 : K.W(P) - K.G.SD / 2; body.push(r(gx - 6.5, K.G.BUSZ + bg.x - 1, 13, bg.w + 2, bg.ok ? 'rgba(31,136,61,.14)' : 'rgba(209,36,47,.16)', bg.ok ? 'var(--success)' : 'var(--danger)', { rx: 2, w: 0.8 })); }
+    else if (o.busGhost) { const bg = o.busGhost; body.push(r(K.G.SD + bg.x - 1, (bg.zone === 'top' ? K.G.BUSZ / 2 : Hd - K.G.BUSZ / 2) - 6.5, bg.w + 2, 13, bg.ok ? 'rgba(31,136,61,.14)' : 'rgba(209,36,47,.16)', bg.ok ? 'var(--success)' : 'var(--danger)', { rx: 2, w: 0.8 })); }
     if (o.ruler) {
       const q = o.ruler, L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), mx = (q.x1 + q.x2) / 2, my = (q.y1 + q.y2) / 2, lab = `${S.fmt(L, 1)} мм`;
       body.push(`<line x1="${f2(q.x1)}" y1="${f2(q.y1)}" x2="${f2(q.x2)}" y2="${f2(q.y2)}" style="stroke:#c0392b;stroke-width:0.7;pointer-events:none"/><circle cx="${f2(q.x1)}" cy="${f2(q.y1)}" r="1.2" style="fill:#c0392b"/><circle cx="${f2(q.x2)}" cy="${f2(q.y2)}" r="1.2" style="fill:#c0392b"/><rect x="${f2(mx - lab.length * 1.05 - 1.5)}" y="${f2(my - 7.5)}" width="${f2(lab.length * 2.1 + 3)}" height="6" rx="1" style="fill:#fff;stroke:#c0392b;stroke-width:0.4;pointer-events:none"/><text x="${f2(mx)}" y="${f2(my - 3.2)}" text-anchor="middle" style="${F};font-size:3.6px;font-weight:700;fill:#c0392b;pointer-events:none">${esc(lab)}</text>`);

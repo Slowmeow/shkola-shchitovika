@@ -343,6 +343,51 @@ const wire = (a, b) => { E.wireStart = null; A.wireClick(a); A.wireClick(b); };
   ok(X && X.w > 100 && X.h > 50 && !/NaN|undefined/.test(X.svg), 'таблицы рядом со щитом', X && [X.w, X.h]);
   ok(!clean(E.P).length, 'модель цела', clean(E.P));
 }
+/* 9г. любой щит: короткие рейки, монтажная панель, боковые шины, клеммы, шаблоны */
+{
+  const P = fresh(3, 18);
+  A.addDevice('ekf-av6', { row: 1, x: 10 });
+  ok(K.setRail(E.P, 1, { mods: 8 }) !== '', 'рейку не укоротить, если аппарат дальше её конца');
+  ok(K.setRail(E.P, 2, { mods: 8, off: 5, label: 'Слаботочка' }) === '' && K.cap(E.P, 2) === 8 && K.rail(E.P, 2).off === 5, 'короткая рейка с отступом');
+  K.sync(E.P);
+  A.addDevice('ekf-av6', { row: 2, x: 7.5 });
+  const d2 = E.P.devs.find((d) => d.row === 2);
+  ok(d2 && d2.x + d2.w <= 8 && K.devGeo(d2).x > K.G.SD + 5 * K.G.MOD - 1, 'аппарат встаёт на короткую рейку с её отступом', d2);
+  A.moveDev(d2, 'R'); A.moveDev(d2, 'R');
+  ok(E.P.devs.find((d) => d.id === d2.id).x + d2.w <= 8, 'за конец короткой рейки не уехать');
+  ok(K.setRail(E.P, 0, { kind: 'plate', h: 210, label: 'Учёт' }) === '' && (K.sync(E.P), Math.round(K.zoneH(0)) === 210), 'монтажная панель высотой 210 мм');
+  A.addDevice('gen-meterpl1', { row: 0, x: 2 });
+  ok(E.P.devs.some((d) => d.sid === 'gen-meterpl1') && !clean(E.P).length && svgOk(E.P), 'счётчик на панели', clean(E.P));
+  /* шины на боковых стенках */
+  const b = E.P.buses.find((x) => x.kind === 'PE');
+  const y0 = K.busPlace(E.P, b, 'right', 40);
+  A.commit(() => { b.zone = 'right'; b.x = y0; return ''; });
+  ok(K.busGeo(E.P, b).vertical && K.busSlot(E.P, b, 1).y > K.busSlot(E.P, b, 0).y, 'шина PE справа, вертикально');
+  wire({ dev: d2.id, term: 'L>' }, { bus: 'N1', slot: 9 });
+  A.autoLine && null;
+  const r = K.autoLine(E.P, d2.id); A.commit(() => '', true);
+  ok(!r.err && E.P.wires.some((w) => w.a.bus === 'PE' || w.b.bus === 'PE'), 'линия берёт PE с боковой шины', r.err);
+  A.setProp('pf', 'wireStyle', 'loop');
+  ok(!clean(E.P).length && svgOk(E.P), 'петли от боковой шины рисуются', clean(E.P));
+  ok(K.busPlace(E.P, E.P.buses.find((x) => x.kind === 'N'), 'right', y0) === null, 'на занятое место у стенки шина не встаёт');
+  /* клеммы на DIN-рейку */
+  A.addDevice('gen-tbn', { row: 1, x: 0 }); A.addDevice('gen-tb', { row: 1, x: 0.5 });
+  const tn = E.P.devs.find((d) => d.sid === 'gen-tbn'), tl = E.P.devs.find((d) => d.sid === 'gen-tb');
+  wire({ bus: 'N1', slot: 6 }, { dev: tn.id, term: '1' });
+  ok(E.P.wires.some((w) => w.b.dev === tn.id), 'нуль на синюю клемму');
+  wire({ dev: tn.id, term: '2' }, { dev: d2.id, term: 'L' });
+  ok(/короткое замыкание/.test(lastMsg()), 'с синей клеммы N на фазу автомата — отказ', lastMsg());
+  ok(K.termNames(tl).top[0] === '1' && K.termNames(tl).bot[0] === '2', 'у клеммы вход 1 и выход 2');
+  /* шаблоны */
+  K.TEMPLATES.forEach((t) => { const T = K.template(t.id); ok(!K.validate(T).length && !/NaN|undefined/.test(S.edDraw(T, { interactive: true }).svg), 'шаблон ' + t.id, K.validate(T)); });
+  const H3 = K.template('house3');
+  ok(H3.buses.every((x) => K.vert(x.zone)) && H3.feed.phases === 3, 'дом: шины на боковых стенках, три фазы');
+  const FL = K.template('floor');
+  ok(K.rail(FL, 0).kind === 'plate' && K.cap(FL, 2) === 12 && FL.devs.filter((d) => d.type === 'meter').length === 3, 'этажный щит: панель учёта, три счётчика, короткая рейка');
+  /* корпус уже: короткие рейки поджимаются */
+  const P4 = K.template('auto');
+  ok(K.resize(P4, 3, 18) === '' && K.cap(P4, 2) <= 18 && !K.validate(P4).length, 'корпус уже — рейки поджаты', K.validate(P4));
+}
 /* 10. импорт всех разборов и автолиния не портят модель */
 Object.keys(S.guideCfgs || {}).forEach((id) => {
   const P = K.fromBuilder(S.engine.build(S.guideCfgs[id](S.engine.newLine)), 'iek');
@@ -389,7 +434,7 @@ for (let round = 0; round < Math.ceil(N / 150); round++) {
         P.lines.forEach((l) => K.lineCores(P, l).forEach((c) => ends.push({ line: l.id, core: c })));
         if (ends.length > 1) wire(pick(ends), pick(ends));
       } else if (op < 0.66 && P.devs.length) { const d = pick(P.devs); A.commit(() => { const r = K.autoLine(P, d.id); return r.err || ''; }); }
-      else if (op < 0.72 && P.buses.length) A.moveBus(pick(P.buses), pick(['8', '-8', '40', '-40', 'top', 'bottom']));
+      else if (op < 0.72 && P.buses.length) A.moveBus(pick(P.buses), pick(['8', '-8', '40', '-40', 'top', 'bottom', 'left', 'right']));
       else if (op < 0.76 && P.devs.length) { const d = pick(P.devs); if (d.type === 'mcb' || d.type === 'rcbo') A.makeComb(d, d.poles >= 3 || rnd() < 0.3 ? ['L1', 'L2', 'L3'] : ['L']); }
       else if (op < 0.84) {
         const kinds = [['dev', P.devs], ['wire', P.wires], ['bus', P.buses], ['line', P.lines], ['comb', P.combs]].filter(([, a]) => a.length);
@@ -405,7 +450,8 @@ for (let round = 0; round < Math.ceil(N / 150); round++) {
         if (r2 < 0.3 && P.devs.length) { A.setSel(P.devs.filter(() => rnd() < 0.3).map((d) => d.id).slice(0, 4)); if (E.sel) { A.copySel(rnd() < 0.3); A.paste(); } }
         else if (r2 < 0.5) A.commit(() => { K.autoStops(P); return ''; });
         else if (r2 < 0.7) { E.sel = null; A.setProp('pf', 'rp' + Math.floor(rnd() * Math.max(1, P.rows - 1)), String(pick([125, 134, 150, 175, 200]))); }
-        else if (r2 < 0.85) { E.sel = null; A.setProp('pf', 'wireStyle', pick(['duct', 'loop', 'line'])); }
+        else if (r2 < 0.78) { E.sel = null; A.setProp('pf', 'wireStyle', pick(['duct', 'loop', 'line'])); }
+        else if (r2 < 0.85) { const k = Math.floor(rnd() * P.rows); A.commit(() => K.setRail(P, k, pick([{ mods: Math.max(2, Math.floor(rnd() * P.mods) + 1), off: Math.floor(rnd() * 4) }, { kind: pick(['din', 'plate']) }, { h: pick([92, 120, 210]) }, { label: 'Отсек' }]))); }
         else if (P.wires.length) { const w = pick(P.wires); E.sel = { kind: 'wire', id: w.id }; const k = pick(['style', 'num', 'color', 'slack']); A.setProp('wf', k, { style: pick(['', 'duct', 'loop', 'line']), num: Math.floor(rnd() * 30), color: pick(['', 'black', 'blue', 'yg']), slack: pick(['', 0, 10, 30]) }[k]); }
       }
       else {

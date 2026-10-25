@@ -22,7 +22,7 @@
 
   const KIND = {
     mcb: 'Автоматы', rcbo: 'Дифавтоматы', rcd: 'УЗО', sw: 'Выключатели нагрузки', spd: 'УЗИП', rn: 'Реле напряжения',
-    km: 'Контакторы', meter: 'Счётчики', dbus: 'Шины N и PE на DIN-рейку', xt: 'Кросс-модули', blank: 'Заглушки', stop: 'Ограничители на DIN-рейку'
+    km: 'Контакторы', meter: 'Счётчики', dbus: 'Шины N и PE на DIN-рейку', xt: 'Кросс-модули', blank: 'Заглушки', stop: 'Ограничители на DIN-рейку', tb: 'Клеммы на DIN-рейку'
   };
 
   /* артикулы по шаблонам каталогов производителей (проверены на примерах: MVA20-1-016-C, mcb6-2-16B-av, mcb4763-1-16C-pro,
@@ -87,9 +87,14 @@
     // общие
     { id: 'gen-meter1', brand: 'gen', series: 'Счётчик 1ф на DIN', kind: 'meter', poles: [1], w: 4, wOpts: [4, 5, 6, 7], note: 'ширину и клеммы — по паспорту счётчика' },
     { id: 'gen-meter3', brand: 'gen', series: 'Счётчик 3ф на DIN', kind: 'meter', poles: [3], w: 7, wOpts: [6, 7, 8, 9] },
+    { id: 'gen-meterpl1', brand: 'gen', series: 'Счётчик 1ф на панель (на винтах)', kind: 'meter', mount: 'panel', poles: [1], w: 7, wOpts: [6, 7, 8], h: 200, note: 'ставится на монтажную панель; габариты — по паспорту счётчика' },
+    { id: 'gen-meterpl3', brand: 'gen', series: 'Счётчик 3ф на панель (на винтах)', kind: 'meter', mount: 'panel', poles: [3], w: 10, wOpts: [9, 10, 11, 12], h: 280, note: 'ставится на монтажную панель; габариты — по паспорту счётчика' },
     { id: 'gen-dbusN', brand: 'gen', series: 'Шина N на DIN-рейку', kind: 'dbus', cond: 'N', poles: [1], w: 4, wOpts: [2, 3, 4, 5, 6, 8], note: 'изолированная шина в корпусе; число зажимов — по паспорту' },
     { id: 'gen-dbusPE', brand: 'gen', series: 'Шина PE на DIN-рейку', kind: 'dbus', cond: 'PE', poles: [1], w: 4, wOpts: [2, 3, 4, 5, 6, 8], note: 'число зажимов — по паспорту' },
     { id: 'gen-blank', brand: 'gen', series: 'Заглушка', kind: 'blank', poles: [1], w: 1, wOpts: [0.5, 1, 2, 3, 4] },
+    { id: 'gen-tb', brand: 'gen', series: 'Клемма проходная (серая)', kind: 'tb', poles: [1], w: 0.5, wOpts: [0.5, 1], h: 60, note: 'ширина в редакторе условная — полмодуля; настоящая — по каталогу клемм' },
+    { id: 'gen-tbn', brand: 'gen', series: 'Клемма проходная N (синяя)', kind: 'tb', cond: 'N', poles: [1], w: 0.5, wOpts: [0.5, 1], h: 60, note: 'ширина в редакторе условная' },
+    { id: 'gen-tbpe', brand: 'gen', series: 'Клемма PE (жёлто-зелёная)', kind: 'tb', cond: 'PE', poles: [1], w: 0.5, wOpts: [0.5, 1], h: 60, note: 'ширина в редакторе условная' },
     { id: 'gen-stop', brand: 'gen', series: 'Ограничитель на DIN-рейку', kind: 'stop', poles: [1], w: 0.5, wOpts: [0.5, 1], note: 'стопор: держит аппараты, чтобы не сползали по рейке; ширину сверь с паспортом' }
   ];
 
@@ -112,8 +117,8 @@
     if (s.curves) d.curve = opt.curve || (s.curves.includes('C') ? 'C' : s.curves[0]);
     if (s.ma) { d.ma = opt.ma || (s.ma.includes(30) ? 30 : s.ma[0]); d.rt = opt.rt || (s.rt ? s.rt[0] : 'AC'); }
     if (s.cls) { d.cls = s.cls; d.scheme = poles === 4 ? '3+1' : poles === 2 ? '1+1' : String(poles); }
-    if (s.kind === 'meter') d.mount = 'din';
-    if (s.kind === 'dbus') d.cond = s.cond || 'N';
+    if (s.kind === 'meter') d.mount = s.mount || 'din';
+    if (s.kind === 'dbus' || s.kind === 'tb') d.cond = s.cond || (s.kind === 'dbus' ? 'N' : '');
     if (s.kind === 'xt') d.outs = (poles === 4 ? ['L1', 'L2', 'L3', 'N', 'L1', 'L2', 'L3', 'N'] : ['L', 'N', 'L', 'N', 'L', 'N', 'L', 'N']).map((c, i) => c + 'out' + i);
     return d;
   };

@@ -508,6 +508,7 @@
     S.cleanup.forEach((f) => { try { f(); } catch (e) { /* ignore */ } });
     S.cleanup = [];
     S.closeSheet();
+    S.closePopover();
     S.current = r;
     /* каждому экрану — чистый контейнер: обработчики, которые прошлый экран повесил на #view, не ловят клики нового */
     const old = S.$('#view');
@@ -564,6 +565,43 @@
     }
     if (e.key === 'Escape') S.closeSheet();
   });
+
+  /* ---------- всплывающие окна (меню, подсказки) ----------
+     Живут в фиксированном слое поверх страницы, поэтому их не обрезают прокручиваемые панели и не перекрывают соседние
+     блоки. anchor — элемент (окно встаёт под ним, а если не помещается — над ним) или точка {x, y}.
+     container — куда вставить (для делегирования кликов экрана); по умолчанию body. Закрывается кликом мимо, Esc,
+     прокруткой страницы, сменой размера окна и переходом на другой экран. */
+  let pop = null;
+  S.closePopover = () => { if (!pop) return; const p = pop; pop = null; p.off(); p.el.remove(); };
+  S.popoverAnchor = () => (pop ? pop.anchor : null);
+  S.popover = (anchor, html, opts = {}) => {
+    S.closePopover();
+    const el = document.createElement('div');
+    el.className = 'pop' + (opts.cls ? ' ' + opts.cls : '');
+    el.setAttribute('role', 'menu');
+    el.innerHTML = html;
+    (opts.container || document.body).appendChild(el);
+    const r = anchor && anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { left: anchor.x, right: anchor.x, top: anchor.y, bottom: anchor.y };
+    const w = el.offsetWidth, h = el.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+    let x = r.left, y = r.bottom + 4;
+    if (y + h > vh - 8 && r.top - h - 4 >= 8) y = r.top - h - 4;
+    el.style.left = Math.max(8, Math.min(x, vw - w - 8)) + 'px';
+    el.style.top = Math.max(8, Math.min(y, vh - h - 8)) + 'px';
+    const inAnchor = (t) => anchor && anchor.contains && anchor.contains(t);
+    const down = (e) => { if (!el.contains(e.target) && !inAnchor(e.target)) S.closePopover(); };
+    const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); S.closePopover(); } };
+    const away = (e) => { if (!e || !e.target || !el.contains(e.target)) S.closePopover(); };
+    const click = (e) => { if (opts.keepOpen) return; if (e.target.closest('button:not([disabled]),a,[data-close]')) setTimeout(S.closePopover, 0); };
+    document.addEventListener('pointerdown', down, true);
+    document.addEventListener('keydown', key, true);
+    window.addEventListener('resize', away);
+    window.addEventListener('scroll', away, true);
+    el.addEventListener('click', click);
+    pop = { el, anchor, off: () => { document.removeEventListener('pointerdown', down, true); document.removeEventListener('keydown', key, true); window.removeEventListener('resize', away); window.removeEventListener('scroll', away, true); } };
+    const first = el.querySelector('button:not([disabled])');
+    if (first && opts.focus !== false) first.focus({ preventScroll: true });
+    return el;
+  };
 
   /* ---------- тост и шторка ---------- */
   let toastT = null;

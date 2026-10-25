@@ -9,7 +9,7 @@
   const G = { MOD: 17.5, ZONE: 92, DUCT: 42, SD: 34, BUSZ: 28, LANES: 11 };
   const PITCHES = [125, 134, 150, 175]; // расстояние между осями реек, мм
   const PRESETS = [[1, 12], [2, 12], [3, 12], [4, 12], [2, 18], [3, 18], [4, 18], [3, 24], [4, 24], [5, 24], [6, 24]];
-  const PREFIX = { stop: 'ZS', mcb: 'QF', sw: 'QS', rcd: 'QD', rcbo: 'QFD', rn: 'KV', spd: 'FV', meter: 'PI', xt: 'XT', km: 'KM', blank: 'Z', dbus: 'XS' };
+  const PREFIX = { tb: 'X', stop: 'ZS', mcb: 'QF', sw: 'QS', rcd: 'QD', rcbo: 'QFD', rn: 'KV', spd: 'FV', meter: 'PI', xt: 'XT', km: 'KM', blank: 'Z', dbus: 'XS' };
   const COND_COL = { L: 'var(--w-l1)', L1: 'var(--w-l1)', L2: 'var(--w-l2)', L3: 'var(--w-l3)', N: 'var(--w-n)', PE: 'var(--w-pe)', PEN: 'var(--w-pe)' };
   /* цвета наконечников НШВИ по сечению — DIN 46228-4 */
   const FERRULE = { 0.5: '#f4f4f4', 0.75: '#9aa0a6', 1: '#d0312d', 1.5: '#1b1b1b', 2.5: '#2a6cd6', 4: '#9aa0a6', 6: '#e2be14', 10: '#d0312d', 16: '#2a6cd6', 25: '#e2be14', 35: '#d0312d' };
@@ -28,25 +28,36 @@
   /* ---------- геометрия ---------- */
   /* каналы: k — над рейкой k, rows — под последней. Верхний и нижний — по общему шагу P.pitch,
      канал между рейками k-1 и k — по своему шагу P.pitches[k-1] (расстояние между осями реек), если он задан */
+  /* рейка k: длина в модулях и отступ слева (рейки бывают короче корпуса), вид — DIN-рейка или монтажная панель
+     (счётчики и аппараты на винтах), высота зоны в мм, подпись отсека («Учёт», «Слаботочка») */
+  const rail = (P, k) => {
+    const r = (P && P.rail && P.rail[k]) || {};
+    const mods = Math.max(1, Math.min(P.mods, r.mods || P.mods));
+    return { mods, off: Math.max(0, Math.min(P.mods - mods, r.off || 0)), kind: r.kind === 'plate' ? 'plate' : 'din', h: Math.max(60, Math.min(400, r.h || G.ZONE)), label: r.label || '' };
+  };
+  const cap = (P, row) => rail(P, row).mods;
   const sync = (P) => {
     const base = Math.max(30, (P && P.pitch ? P.pitch : 134) - G.ZONE);
     G.DUCT = base;
     const n = P && P.rows ? P.rows : 0;
-    G.dH = []; G.dT = [];
+    G.dH = []; G.dT = []; G.zH = []; G.roff = [];
+    for (let k = 0; k < n; k++) { const r = rail(P, k); G.zH.push(r.h); G.roff.push(r.off); }
     let y = G.BUSZ;
     for (let k = 0; k <= n; k++) {
       const pk = k > 0 && k < n && P.pitches && P.pitches[k - 1];
-      const h = pk ? Math.max(30, pk - G.ZONE) : base;
+      const h = k > 0 && k < n ? Math.max(30, (pk || P.pitch || 134) - (G.zH[k - 1] + G.zH[k]) / 2) : base;
       G.dT.push(y); G.dH.push(h);
-      y += h + (k < n ? G.ZONE : 0);
+      y += h + (k < n ? G.zH[k] : 0);
     }
   };
+  const zoneH = (i) => (G.zH && G.zH[i] != null ? G.zH[i] : G.ZONE);
+  const railOff = (i) => (G.roff && G.roff[i]) || 0;
   const ductH = (k) => (G.dH && G.dH[k] != null ? G.dH[k] : G.DUCT);
   const ductTop = (k) => (G.dT && G.dT[k] != null ? G.dT[k] : G.BUSZ + k * (G.ZONE + G.DUCT));
   const W = (P) => P.mods * G.MOD + 2 * G.SD;
   const H = (P) => { sync(P); return ductTop(P.rows) + ductH(P.rows) + G.BUSZ; };
   const rowTop = (i) => ductTop(i) + ductH(i);
-  const railY = (i) => rowTop(i) + G.ZONE / 2;
+  const railY = (i) => rowTop(i) + zoneH(i) / 2;
   /* шаг между осями реек k и k+1 */
   const pitchOf = (P, k) => (P.pitches && P.pitches[k]) || P.pitch || 134;
   const lib = () => S.edLib;
@@ -55,11 +66,12 @@
   const artOf = (d) => { if (d.art) return d.art; const s = spec(d); if (!s || !s.art) return ''; return typeof s.art === 'function' ? s.art(d) : String(s.art); };
   const faceOf = (d) => { const s = spec(d); if (!s) return ''; const f = s.face || s.series || ''; return typeof f === 'function' ? f(d) : f; };
   const devH = (d) => (spec(d) && spec(d).h) || 85;
-  const devGeo = (d) => { const h = devH(d); return { x: G.SD + d.x * G.MOD + 0.25, y: railY(d.row) - h / 2, w: d.w * G.MOD - 0.5, h }; };
+  const devGeo = (d) => { const h = devH(d); return { x: G.SD + (railOff(d.row) + d.x) * G.MOD + 0.25, y: railY(d.row) - h / 2, w: d.w * G.MOD - 0.5, h }; };
 
   const termNames = (d) => {
     if (d.type === 'km') { const p = d.poles; const t = ['1', '3', '5', '7'].slice(0, p), b = ['2', '4', '6', '8'].slice(0, p); return { top: t.concat(['A1']), bot: b.concat(['A2']) }; }
-    if (d.type === 'blank') return { top: [], bot: [] };
+    if (d.type === 'blank' || d.type === 'stop') return { top: [], bot: [] };
+    if (d.type === 'tb') return { top: ['1'], bot: ['2'] };
     if (d.type === 'dbus') { const n = Math.max(2, Math.round(d.w * 2)); const c = d.cond || 'N'; return { top: [...Array(n).keys()].map((i) => `${c}${i + 1}`), bot: [...Array(n).keys()].map((i) => `${c}${n + i + 1}`) }; }
     return S.engine ? S.engine.TERMS(d) : { top: [], bot: [] };
   };
@@ -69,11 +81,17 @@
     put(T.top, 'top'); put(T.bot, 'bot');
     return out;
   };
-  /* шины на корпусе: в верхней или нижней зоне; шаг винтов 8 мм */
+  /* шины на корпусе: сверху и снизу — горизонтально, слева и справа — вертикально на боковой стенке; шаг винтов 8 мм.
+     b.x — сдвиг вдоль шины: от левого края у горизонтальных, от верха у боковых */
+  const vert = (z) => z === 'left' || z === 'right';
   const busW = (b) => 20 + (b.n - 1) * 8;
-  const busGeo = (P, b) => { const y = b.zone === 'top' ? G.BUSZ / 2 : H(P) - G.BUSZ / 2; const x = G.SD + b.x; return { x, y, w: busW(b), h: 9 }; };
-  const busSlot = (P, b, k) => { const g = busGeo(P, b); return { x: g.x + 10 + k * 8, y: g.y }; };
-  const busMaxX = (P, b) => W(P) - 2 * G.SD - busW(b);
+  const busGeo = (P, b) => {
+    if (vert(b.zone)) return { x: b.zone === 'left' ? G.SD / 2 : W(P) - G.SD / 2, y: G.BUSZ + b.x, w: busW(b), h: 9, vertical: true };
+    const y = b.zone === 'top' ? G.BUSZ / 2 : H(P) - G.BUSZ / 2; const x = G.SD + b.x; return { x, y, w: busW(b), h: 9 };
+  };
+  const busSlot = (P, b, k) => { const g = busGeo(P, b); return g.vertical ? { x: g.x, y: g.y + 10 + k * 8 } : { x: g.x + 10 + k * 8, y: g.y }; };
+  const busMaxX = (P, b, zone) => (vert(zone || b.zone) ? H(P) - 2 * G.BUSZ - busW(b) : W(P) - 2 * G.SD - busW(b));
+  const nearDuct = (P, y) => { let best = 0, bd = 1e9; for (let k = 0; k <= P.rows; k++) { const c = ductTop(k) + ductH(k) / 2; if (Math.abs(c - y) < bd) { bd = Math.abs(c - y); best = k; } } return best; };
   const feedCores = (P) => {
     const ph = P.feed.phases === 3 ? ['L1', 'L2', 'L3'] : ['L'];
     if (P.feed.earthing === 'TN-C>S' || P.feed.earthing === 'TN-C') return ph.concat(['PEN']);
@@ -98,7 +116,7 @@
       const b = P.buses.find((x) => x.id === e.bus);
       if (!b) return null;
       const p = busSlot(P, b, Math.min(e.slot || 0, b.n - 1));
-      return { x: p.x, y: p.y, duct: b.zone === 'top' ? 0 : P.rows };
+      return { x: p.x, y: p.y, duct: vert(b.zone) ? nearDuct(P, p.y) : b.zone === 'top' ? 0 : P.rows };
     }
     if (e.feed) { const p = feedPt(P, e.feed); return { x: p.x, y: p.y, side: 'feed' }; }
     if (e.line) {
@@ -114,11 +132,11 @@
   /* трасса: вертикально в канал, по каналу, при смене канала — через боковой канал */
   /* как проложен провод: по кабель-каналам, петлёй напрямую (как в небольших щитках) или прямой линией */
   const styleOf = (P, w) => w.style || P.wireStyle || 'duct';
-  /* куда провод уходит от конца: вниз (+1) с нижних клемм, верхней шины и ввода; вверх (−1) с верхних клемм, нижней шины и кабелей линий */
+  /* куда провод уходит от конца, вектор [dx, dy]: вниз с нижних клемм, верхней шины и ввода; вверх с верхних клемм, нижней шины и кабелей; в сторону щита с боковых шин */
   function exitDir(P, e) {
-    if (e.dev) { const d = P.devs.find((x) => x.id === e.dev); const t = d && terms(d).find((x) => x.t === e.term); return t && t.side === 'top' ? -1 : 1; }
-    if (e.bus) { const b = P.buses.find((x) => x.id === e.bus); return b && b.zone === 'top' ? 1 : -1; }
-    return e.feed ? 1 : -1;
+    if (e.dev) { const d = P.devs.find((x) => x.id === e.dev); const t = d && terms(d).find((x) => x.t === e.term); return [0, t && t.side === 'top' ? -1 : 1]; }
+    if (e.bus) { const b = P.buses.find((x) => x.id === e.bus); if (b && vert(b.zone)) return [b.zone === 'left' ? 1 : -1, 0]; return [0, b && b.zone === 'top' ? 1 : -1]; }
+    return [0, e.feed ? 1 : -1];
   }
   function route(P, w, idx) {
     const a = endInfo(P, w.a), b = endInfo(P, w.b);
@@ -130,7 +148,7 @@
     if (st === 'loop' && dA === dB) {
       const da = exitDir(P, w.a), db = exitDir(P, w.b);
       const k = Math.max(14, Math.min(70, Math.hypot(b.x - a.x, b.y - a.y) * 0.45)) + (w.dy || 0);
-      const c1 = [a.x, a.y + da * k], c2 = [b.x, b.y + db * k];
+      const c1 = [a.x + da[0] * k, a.y + da[1] * k], c2 = [b.x + db[0] * k, b.y + db[1] * k];
       const pts = [];
       for (let i = 0; i <= 24; i++) { const t = i / 24, u = 1 - t; pts.push([u * u * u * a.x + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * b.x, u * u * u * a.y + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * b.y]); }
       pts.bez = [[a.x, a.y], c1, c2, [b.x, b.y]];
@@ -211,7 +229,7 @@
     const T = termNames(d);
     if (d.type === 'rn') return [['Lin', 'Lout']];
     if (d.type === 'km') return T.top.filter((t) => t !== 'A1').map((t, i) => [t, T.bot[i]]);
-    if (d.type === 'xt' || d.type === 'dbus' || d.type === 'blank') return [];
+    if (d.type === 'xt' || d.type === 'dbus' || d.type === 'blank' || d.type === 'tb' || d.type === 'stop') return [];
     if (d.type === 'meter') return T.top.map((t, i) => [t, T.bot[i]]);
     return T.top.filter((t, i) => T.bot[i] === t + '>').map((t) => [t, t + '>']);
   }
@@ -229,6 +247,7 @@
     P.combs.forEach((c) => combGroups(P, c).forEach((ks) => ks.slice(1).forEach((k) => U.union(ks[0], k))));
     P.devs.forEach((d) => {
       if (d.type === 'xt') { const T = termNames(d); (d.outs || []).forEach((o, i) => { const src = T.top.find((t) => t.startsWith(o.replace(/out.*/, '').slice(0, 2))) || T.top[o.startsWith('N') ? T.top.length - 1 : 0]; if (T.bot[i]) U.union(`d:${d.id}:${T.bot[i]}`, `d:${d.id}:${src}`); }); }
+      if (d.type === 'tb') U.union(`d:${d.id}:1`, `d:${d.id}:2`);
       if (d.type === 'dbus') { const T = termNames(d); T.top.concat(T.bot).forEach((t) => U.union(`d:${d.id}:${T.top[0]}`, `d:${d.id}:${t}`)); }
     });
     if (opt.pass) P.devs.forEach((d) => passPairs(d).forEach(([a, b]) => U.union(`d:${d.id}:${a}`, `d:${d.id}:${b}`)));
@@ -237,7 +256,7 @@
   const classOf = (k) => (k.startsWith('f:') ? k.slice(2) : k.startsWith('l:') ? k.split(':')[2] : null);
   const busClass = (P, k) => { const b = P.buses.find((x) => 'b:' + x.id === k); return b ? b.kind : null; };
   /* назначение клеммы по её имени: фазная, нулевая или защитная */
-  const ownClass = (d, t) => (['km', 'meter', 'blank', 'dbus'].includes(d.type) || !t ? null : /^PE/.test(t) ? 'PE' : /^L/.test(t) ? 'L' : /^N/.test(t) ? 'N' : null);
+  const ownClass = (d, t) => (d.type === 'tb' ? (d.cond === 'N' || d.cond === 'PE' ? d.cond : null) : ['km', 'meter', 'blank', 'dbus'].includes(d.type) || !t ? null : /^PE/.test(t) ? 'PE' : /^L/.test(t) ? 'L' : /^N/.test(t) ? 'N' : null);
   function classes(P, extra) {
     const U = nets(P, { pass: true });
     if (extra) U.union(keyOf(extra.a), keyOf(extra.b));
@@ -323,10 +342,10 @@
     sync(P);
     const res = [];
     const add = (level, text, ref) => res.push({ level, text, ref: ref || '' });
-    const used = P.devs.reduce((s, d) => s + d.w, 0), cap = P.rows * P.mods;
-    P.devs.forEach((d) => { if (d.x + d.w > P.mods + EPS || d.row >= P.rows) add('err', `${d.id} выходит за пределы реек.`); });
-    const free = cap ? (cap - used) / cap : 0;
-    add(free < 0.15 ? 'warn' : 'ok', `Занято ${S.fmt(used, 1)} из ${cap} модулей, свободно ${Math.round(free * 100)} %${free < 0.15 ? ' — запаса меньше 15 %, новую линию ставить будет некуда' : ''}.`);
+    const used = P.devs.reduce((s, d) => s + d.w, 0), capAll = [...Array(P.rows).keys()].reduce((s, k) => s + cap(P, k), 0);
+    P.devs.forEach((d) => { if (d.row >= P.rows || d.x + d.w > cap(P, d.row) + EPS) add('err', `${d.id} выходит за пределы реек.`); });
+    const free = capAll ? (capAll - used) / capAll : 0;
+    add(free < 0.15 ? 'warn' : 'ok', `Занято ${S.fmt(used, 1)} из ${capAll} модулей, свободно ${Math.round(free * 100)} %${free < 0.15 ? ' — запаса меньше 15 %, новую линию ставить будет некуда' : ''}.`);
     const per = {}, secs = {};
     P.wires.forEach((w) => [w.a, w.b].forEach((e) => { if (e.dev) { const k = keyOf(e); per[k] = (per[k] || 0) + 1; (secs[k] = secs[k] || new Set()).add(w.mm2); } }));
     Object.entries(per).forEach(([k, n]) => { if (n > 2) add('err', `Клемма ${k.slice(2).replace(':', ' «')}» — ${n} проводника; больше двух в одну клемму не заводят.`); });
@@ -384,14 +403,16 @@
 
   /* ---------- вставка аппарата: раздвижка соседей вправо и влево, прилипание к соседям ---------- */
   function placeInsert(P, row, x, w, ignore, opt = {}) {
-    if (row < 0 || row >= P.rows || w > P.mods + EPS) return null;
-    x = Math.max(0, Math.min(P.mods - w, Math.round(x * 2) / 2));
+    if (row < 0 || row >= P.rows) return null;
+    const C0 = cap(P, row);
+    if (w > C0 + EPS) return null;
+    x = Math.max(0, Math.min(C0 - w, Math.round(x * 2) / 2));
     const ign = new Set([].concat(ignore || []));
     const rowDevs = P.devs.filter((d) => d.row === row && !ign.has(d.id)).sort((a, b) => a.x - b.x);
     const mid = x + w / 2;
     const left = rowDevs.filter((d) => d.x + d.w / 2 < mid - EPS), right = rowDevs.filter((d) => d.x + d.w / 2 >= mid - EPS);
     const prevEnd = left.length ? left[left.length - 1].x + left[left.length - 1].w : 0;
-    const nextStart = right.length ? right[0].x : P.mods;
+    const nextStart = right.length ? right[0].x : C0;
     if (opt.snap !== false) {
       if (x - prevEnd > 0 && x - prevEnd <= 0.5 + EPS) x = prevEnd;
       else if (nextStart - (x + w) > 0 && nextStart - (x + w) <= 0.5 + EPS && nextStart - w >= prevEnd - EPS) x = nextStart - w;
@@ -401,7 +422,7 @@
     const nx = cur;
     cur += w;
     for (const d of right) { const v = Math.max(d.x, cur); pos.set(d, v); cur = v + d.w; }
-    let overflow = cur - P.mods;
+    let overflow = cur - C0;
     let start = nx;
     if (overflow > EPS) {
       // не помещается справа — сдвигаем вставляемый аппарат и левых соседей влево
@@ -411,7 +432,7 @@
       if (edge < -EPS) return null;
       let c2 = start + w;
       for (const d of right) { const v = Math.max(Math.min(pos.get(d), d.x), c2); pos.set(d, v); c2 = v + d.w; }
-      if (c2 > P.mods + EPS) return null;
+      if (c2 > C0 + EPS) return null;
     }
     if (opt.apply !== false) pos.forEach((v, d) => { d.x = Math.round(v * 2) / 2; });
     return { x: Math.round(start * 2) / 2, moved: [...pos.entries()].filter(([d, v]) => Math.abs(d.x - v) > EPS || opt.apply !== false).length };
@@ -426,7 +447,7 @@
     if (opt.apply !== false) ds.forEach((d) => { const off = d.x - x0; d.row = row; d.x = r.x + off; });
     return Object.assign(r, { span, x0 });
   }
-  const fits = (P, row, x, w, ignore) => x >= -EPS && x + w <= P.mods + EPS && row >= 0 && row < P.rows && !P.devs.some((d) => d.id !== ignore && d.row === row && x < d.x + d.w - EPS && d.x < x + w - EPS);
+  const fits = (P, row, x, w, ignore) => x >= -EPS && row >= 0 && row < P.rows && x + w <= cap(P, row) + EPS && row >= 0 && row < P.rows && !P.devs.some((d) => d.id !== ignore && d.row === row && x < d.x + d.w - EPS && d.x < x + w - EPS);
   const placeShift = (P, row, x, w, ignore) => { const r = placeInsert(P, row, x, w, ignore, { snap: false }); return !!r && Math.abs(r.x - x) < EPS; };
 
   /* гребёнка лежит только на соседних аппаратах одной рейки: разрывы режут её на части, одиночные аппараты снимаются */
@@ -449,22 +470,41 @@
   }
 
   /* изменить размеры корпуса без потери аппаратов */
-  const busBad = (P) => P.buses.some((b) => b.x < -EPS || b.x > busMaxX(P, b) + EPS) || ['top', 'bottom'].some((z) => { const bs = P.buses.filter((b) => b.zone === z); return bs.some((a, i) => bs.slice(i + 1).some((b) => a.x < b.x + busW(b) && b.x < a.x + busW(a))); });
+  const busBad = (P) => P.buses.some((b) => b.x < -EPS || b.x > busMaxX(P, b) + EPS) || ['top', 'bottom', 'left', 'right'].some((z) => { const bs = P.buses.filter((b) => b.zone === z); return bs.some((a, i) => bs.slice(i + 1).some((b) => a.x < b.x + busW(b) && b.x < a.x + busW(a))); });
   const busUsedMax = (P, b) => Math.max(-1, ...P.wires.map((w) => [w.a, w.b].filter((e) => e.bus === b.id).map((e) => e.slot || 0)).flat());
   function resize(P, rows, mods) {
     if (P.devs.some((d) => d.row >= rows)) return `На рейке ${rows + 1} стоят аппараты — сначала перенеси их.`;
-    if (P.devs.some((d) => d.x + d.w > mods + EPS)) return `Аппараты занимают больше ${mods} модулей в ряду — сначала сдвинь их.`;
     const T = JSON.parse(JSON.stringify(P));
     T.rows = rows; T.mods = mods;
+    if (T.rail) { T.rail = T.rail.slice(0, rows); T.rail.forEach((r) => { if (!r) return; if (r.mods > mods) r.mods = mods; if ((r.off || 0) + (r.mods || mods) > mods) r.off = Math.max(0, mods - (r.mods || mods)); }); }
+    if (T.devs.some((d) => d.x + d.w > cap(T, d.row) + EPS)) return `Аппараты занимают больше ${mods} модулей в ряду — сначала сдвинь их.`;
     const maxN = Math.floor((mods * G.MOD - 20) / 8) + 1;
     for (const b of T.buses) {
       if (b.n > maxN) { if (busUsedMax(T, b) >= maxN) return `Шина ${b.id} не помещается в корпус шириной ${mods} модулей: на ней заняты дальние отверстия.`; b.n = Math.max(2, maxN); }
+      if (vert(b.zone)) { const maxV = Math.floor((H(T) - 2 * G.BUSZ - 20) / 8) + 1; if (b.n > maxV) { if (busUsedMax(T, b) >= maxV) return `Шина ${b.id} сбоку не помещается по высоте.`; b.n = Math.max(2, maxV); } }
       b.x = Math.max(0, Math.min(b.x, busMaxX(T, b)));
     }
     if (busBad(T)) { arrangeBuses(T); balanceBuses(T); }
     if (busBad(T)) return `Шины не помещаются в корпус шириной ${mods} модулей — убери лишнюю шину или укороти шины.`;
-    P.rows = rows; P.mods = mods; P.buses = T.buses;
+    P.rows = rows; P.mods = mods; P.buses = T.buses; if (T.rail) P.rail = T.rail;
     if (P.pitches) P.pitches = P.pitches.slice(0, Math.max(0, rows - 1));
+    return '';
+  }
+  /* настроить рейку k: длина, отступ, вид, высота, подпись; аппараты должны остаться на рейке */
+  function setRail(P, k, patch) {
+    if (k < 0 || k >= P.rows) return 'Такой рейки нет.';
+    const cur = Object.assign({}, (P.rail && P.rail[k]) || {});
+    const nx = Object.assign(cur, patch);
+    const mods = Math.max(1, Math.min(P.mods, Number(nx.mods) || P.mods));
+    const off = Math.max(0, Math.min(P.mods - mods, Number(nx.off) || 0));
+    const far = P.devs.filter((d) => d.row === k).reduce((m, d) => Math.max(m, d.x + d.w), 0);
+    if (far > mods + EPS) return `На рейке ${k + 1} аппараты стоят до ${S.fmt(far, 1)}-го модуля — короче ${S.fmt(far, 1)} мод. её не сделать. Сдвинь аппараты влево.`;
+    const tall = P.devs.filter((d) => d.row === k).reduce((m, d) => Math.max(m, devH(d)), 0);
+    const h = Math.max(60, Math.min(400, Number(nx.h) || G.ZONE));
+    if (tall && h < tall + 4) return `Самый высокий аппарат на рейке — ${tall} мм; зона должна быть не ниже ${tall + 4} мм.`;
+    P.rail = P.rail || [];
+    for (let i = 0; i < P.rows; i++) P.rail[i] = P.rail[i] || {};
+    P.rail[k] = { mods: mods === P.mods && !patch.mods && !cur.mods ? undefined : mods, off, kind: nx.kind === 'plate' ? 'plate' : 'din', h: h === G.ZONE ? undefined : h, label: String(nx.label || '').slice(0, 40) };
     return '';
   }
   /* рейки по одной: вставить пустую перед k, убрать пустую k, поменять k и k+1 местами */
@@ -473,6 +513,7 @@
       if (P.rows >= 8) return 'Больше восьми реек в редакторе не бывает — возьми второй щит.';
       P.devs.forEach((d) => { if (d.row >= k) d.row += 1; });
       if (P.pitches) P.pitches.splice(Math.max(0, k - 1), 0, P.pitch || 134);
+      if (P.rail) P.rail.splice(k, 0, {});
       P.rows += 1;
       return '';
     }
@@ -481,12 +522,14 @@
       if (P.devs.some((d) => d.row === k)) return `На рейке ${k + 1} стоят аппараты — сначала перенеси их.`;
       P.devs.forEach((d) => { if (d.row > k) d.row -= 1; });
       if (P.pitches) P.pitches.splice(Math.max(0, k - 1), 1);
+      if (P.rail) P.rail.splice(k, 1);
       P.rows -= 1;
       return '';
     }
     if (op === 'swap') {
       if (k < 0 || k + 1 >= P.rows) return 'Ниже этой рейки нет.';
       P.devs.forEach((d) => { if (d.row === k) d.row = k + 1; else if (d.row === k + 1) d.row = k; });
+      if (P.rail) { P.rail.length = Math.max(P.rail.length, k + 2); const t = P.rail[k]; P.rail[k] = P.rail[k + 1] || {}; P.rail[k + 1] = t || {}; }
       return '';
     }
     return '';
@@ -508,7 +551,7 @@
       const x0 = ds()[0].x;
       if (!P.devs.some((d) => d.row === row && d.type === 'stop' && Math.abs(d.x + d.w - x0) < EPS)) put(row, Math.max(0, x0 - 0.5));
       const last = ds()[ds().length - 1], x1 = last.x + last.w;
-      if (!P.devs.some((d) => d.row === row && d.type === 'stop' && Math.abs(d.x - x1) < EPS)) put(row, Math.min(x1, P.mods - 0.5));
+      if (!P.devs.some((d) => d.row === row && d.type === 'stop' && Math.abs(d.x - x1) < EPS)) put(row, Math.min(x1, cap(P, row) - 0.5));
     }
     return { added, miss };
   }
@@ -530,11 +573,12 @@
     ds.forEach((d, i) => { if (!i) { rel.push(0); return; } const p = ds[i - 1]; rel.push(rel[i - 1] + p.w + (d.row === p.row ? Math.max(0, d.x - p.x - p.w) : 0)); });
     const span = rel[rel.length - 1] + ds[ds.length - 1].w;
     if (span > P.mods + EPS) return { err: 'Скопированные аппараты длиннее рейки.' };
+    const capR = (row) => cap(P, row);
     const order = [...Array(P.rows).keys()];
     if (prefRow != null && prefRow >= 0 && prefRow < P.rows) order.unshift(...order.splice(prefRow, 1));
     let place = null;
-    for (const row of order) { const end = P.devs.filter((d) => d.row === row).reduce((m, d) => Math.max(m, d.x + d.w), 0); if (end + span <= P.mods + EPS) { place = { row, x: end }; break; } }
-    for (let row = 0; row < P.rows && !place; row++) for (let x = 0; x + span <= P.mods + EPS; x += 0.5) if (fits(P, row, x, span)) { place = { row, x }; break; }
+    for (const row of order) { const end = P.devs.filter((d) => d.row === row).reduce((m, d) => Math.max(m, d.x + d.w), 0); if (end + span <= capR(row) + EPS) { place = { row, x: end }; break; } }
+    for (let row = 0; row < P.rows && !place; row++) for (let x = 0; x + span <= capR(row) + EPS; x += 0.5) if (fits(P, row, x, span)) { place = { row, x }; break; }
     if (!place) return { err: 'Для вставки нет места: освободи рейку или добавь новую.' };
     const map = {};
     ds.forEach((d, i) => { const nd = JSON.parse(JSON.stringify(d)); nd.id = nextId(P, d.type, d.cond); map[d.id] = nd.id; nd.row = place.row; nd.x = place.x + rel[i]; P.devs.push(nd); });
@@ -544,7 +588,7 @@
   }
   /* разложить шины корпуса без наложений */
   function arrangeBuses(P) {
-    ['top', 'bottom'].forEach((z) => { let x = 4; P.buses.filter((b) => b.zone === z).sort((a, b) => a.x - b.x).forEach((b) => { b.x = x; x += busW(b) + 6; }); });
+    ['top', 'bottom', 'left', 'right'].forEach((z) => { let x = 4; P.buses.filter((b) => b.zone === z).sort((a, b) => a.x - b.x).forEach((b) => { b.x = x; x += busW(b) + 6; }); });
   }
   /* если шины не помещаются в своей зоне — переносим лишние в другую зону */
   function balanceBuses(P) {
@@ -563,7 +607,7 @@
   /* поставить шину в зону с прилипанием к соседним шинам; возвращает итоговый x или null */
   function busPlace(P, b, zone, x) {
     const others = P.buses.filter((o) => o !== b && o.zone === zone).sort((a, c) => a.x - c.x);
-    const w = busW(b), maxX = busMaxX(P, b);
+    const w = busW(b), maxX = busMaxX(P, b, zone);
     x = Math.max(0, Math.min(maxX, Math.round(x)));
     for (const o of others) {
       const oe = o.x + busW(o);
@@ -625,6 +669,34 @@
     }
     if (opt.apply !== false) { P.lines.push(l); ws.forEach((w) => { if (WN(P).auto) w.num = nextWireNum(P); P.wires.push(w); }); } else ungrow();
     return { line: l, wires: ws };
+  }
+
+  /* ---------- шаблоны типовых щитов: раскладка реек, шин и каналов; аппараты добавляешь сам ---------- */
+  const TEMPLATES = [
+    { id: 'empty', name: 'Пустой щит', note: 'Рейки одной длины, шины N сверху и PE снизу.' },
+    { id: 'flat24', name: 'Квартира: пластиковый щит на 24 модуля', note: 'Две рейки по 12, без кабель-каналов — провода петлями, шины N и PE на DIN-рейке.' },
+    { id: 'flat36', name: 'Квартира: металлический щит на 36 модулей', note: 'Три рейки по 12, кабель-каналы, шины сверху и снизу.' },
+    { id: 'house3', name: 'Частный дом, три фазы: 54 модуля', note: 'Три рейки по 18, шины N и PE вертикально на боковых стенках.' },
+    { id: 'meter', name: 'Щит учёта: счётчик на панели + автоматы', note: 'Сверху монтажная панель под счётчик на винтах, снизу короткая рейка под вводной автомат и УЗИП.' },
+    { id: 'floor', name: 'Этажный щит: учёт квартир и слаботочный отсек', note: 'Панель под счётчики квартир, рейка автоматов, короткая рейка слаботочного отсека, PE сбоку.' },
+    { id: 'garage', name: 'Гараж или дача: маленький щит на 8 модулей', note: 'Одна короткая рейка, без каналов, шины N и PE на DIN-рейке.' },
+    { id: 'light', name: 'Щит освещения: 4 рейки по 24 модуля', note: 'Три фазы, кабель-каналы, много групп.' },
+    { id: 'auto', name: 'Щит автоматики на монтажной панели', note: 'Рейки защиты и контакторов, ряд клемм X1, кабель-каналы, PE сбоку.' }
+  ];
+  function template(id) {
+    const P = blank(2, 12);
+    const put = (sid, row, x, opt) => { const d = lib().make(sid, opt || {}); d.id = nextId(P, d.type, d.cond); d.row = row; d.x = x; d.label = (opt && opt.label) || ''; P.devs.push(d); return d; };
+    const t = TEMPLATES.find((x) => x.id === id) || TEMPLATES[0];
+    P.name = t.name;
+    if (id === 'flat24') { P.rows = 2; P.mods = 12; P.ducts = false; P.wireStyle = 'loop'; P.buses = []; put('gen-dbusN', 1, 8, { w: 2 }); put('gen-dbusPE', 1, 10, { w: 2 }); }
+    if (id === 'flat36') { P.rows = 3; P.mods = 12; }
+    if (id === 'house3') { P.rows = 3; P.mods = 18; P.feed = { phases: 3, earthing: 'TN-C-S' }; P.buses = [{ id: 'N1', kind: 'N', zone: 'left', x: 30, n: 16 }, { id: 'PE', kind: 'PE', zone: 'right', x: 30, n: 16 }]; }
+    if (id === 'meter') { P.rows = 2; P.mods = 12; P.rail = [{ kind: 'plate', h: 210, label: 'Отсек учёта' }, { mods: 6, off: 3, label: 'Ввод и защита' }]; P.buses = [{ id: 'N1', kind: 'N', zone: 'bottom', x: 4, n: 8 }, { id: 'PE', kind: 'PE', zone: 'bottom', x: 100, n: 8 }]; put('gen-meterpl1', 0, 3); }
+    if (id === 'floor') { P.rows = 3; P.mods = 24; P.feed = { phases: 3, earthing: 'TN-C-S' }; P.rail = [{ kind: 'plate', h: 210, label: 'Учёт квартир' }, { label: 'Автоматы квартир' }, { mods: 12, label: 'Слаботочный отсек' }]; P.buses = [{ id: 'N1', kind: 'N', zone: 'top', x: 4, n: 14 }, { id: 'PE', kind: 'PE', zone: 'left', x: 40, n: 14 }]; [0, 7, 14].forEach((x) => put('gen-meterpl1', 0, x)); }
+    if (id === 'garage') { P.rows = 1; P.mods = 12; P.rail = [{ mods: 8, off: 2 }]; P.ducts = false; P.wireStyle = 'loop'; P.buses = []; put('gen-dbusN', 0, 4, { w: 2 }); put('gen-dbusPE', 0, 6, { w: 2 }); }
+    if (id === 'light') { P.rows = 4; P.mods = 24; P.feed = { phases: 3, earthing: 'TN-C-S' }; }
+    if (id === 'auto') { P.rows = 3; P.mods = 24; P.feed = { phases: 3, earthing: 'TN-S' }; P.rail = [{ label: 'Ввод и защита' }, { label: 'Контакторы и реле' }, { label: 'Клеммы X1' }]; P.buses = [{ id: 'N1', kind: 'N', zone: 'top', x: 4, n: 12 }, { id: 'PE', kind: 'PE', zone: 'right', x: 40, n: 16 }]; for (let i = 0; i < 10; i++) put(i < 6 ? 'gen-tb' : i < 8 ? 'gen-tbn' : 'gen-tbpe', 2, 2 + i * 0.5); }
+    return P;
   }
 
   /* ---------- импорт из конструктора ---------- */
@@ -735,7 +807,9 @@
       P.wires.forEach((w) => { if (w.num === '' || w.num == null) return; String(w.num).split('').forEach((c) => { dig[c] = (dig[c] || 0) + 2; }); });
       Object.keys(dig).sort().forEach((c) => add('mk' + c, `Маркер провода «${c}»`, dig[c]));
     }
-    add('enc', `Корпус на ${P.rows * P.mods} модулей (${P.rows} × ${P.mods}), шаг реек ${P.pitch || 134} мм`, 1);
+    const capAll = [...Array(P.rows).keys()].reduce((s, k) => s + cap(P, k), 0);
+    add('enc', `Корпус: ${P.rows} рейк${P.rows === 1 ? 'а' : P.rows < 5 ? 'и' : ''}, всего ${capAll} модулей, ширина ${P.mods} мод.${P.ducts === false ? ', без кабель-каналов' : ''}`, 1);
+    for (let k = 0; k < P.rows; k++) { const r = rail(P, k); if (r.kind === 'din') add('rail' + r.mods, `DIN-рейка 35 мм, отрезок ${S.fmt(r.mods * G.MOD, 1)} мм (${r.mods} мод.)`, 1); }
     return Object.values(rows);
   }
 
@@ -773,7 +847,7 @@
   /* проверка целостности модели (используется в тестах) */
   function validate(P) {
     const errs = [];
-    P.devs.forEach((d) => { if (d.row < 0 || d.row >= P.rows || d.x < -EPS || d.x + d.w > P.mods + EPS) errs.push('out:' + d.id); });
+    P.devs.forEach((d) => { if (d.row < 0 || d.row >= P.rows || d.x < -EPS || d.x + d.w > cap(P, d.row) + EPS) errs.push('out:' + d.id); });
     P.devs.forEach((a, i) => P.devs.slice(i + 1).forEach((b) => { if (a.row === b.row && a.x < b.x + b.w - EPS && b.x < a.x + a.w - EPS) errs.push('overlap:' + a.id + '/' + b.id); }));
     if (new Set(P.devs.map((d) => d.id)).size !== P.devs.length) errs.push('dup-id');
     P.wires.forEach((w, i) => { if (!endInfo(P, w.a) || !endInfo(P, w.b)) errs.push('dangling:' + w.id); else if (!route(P, w, i)) errs.push('noroute:' + w.id); });
@@ -783,11 +857,11 @@
       else if (ds.length < 2 || ds.some((d, i) => i && (d.row !== ds[i - 1].row || Math.abs(ds[i - 1].x + ds[i - 1].w - d.x) > EPS))) errs.push('comb-gap:' + c.id);
     });
     P.buses.forEach((b) => { if (b.x < -EPS || b.x > busMaxX(P, b) + EPS) errs.push('bus-out:' + b.id); });
-    ['top', 'bottom'].forEach((z) => { const bs = P.buses.filter((b) => b.zone === z); bs.forEach((a, i) => bs.slice(i + 1).forEach((b) => { if (a.x < b.x + busW(b) && b.x < a.x + busW(a)) errs.push('bus-overlap:' + a.id + '/' + b.id); })); });
+    ['top', 'bottom', 'left', 'right'].forEach((z) => { const bs = P.buses.filter((b) => b.zone === z); bs.forEach((a, i) => bs.slice(i + 1).forEach((b) => { if (a.x < b.x + busW(b) && b.x < a.x + busW(a)) errs.push('bus-overlap:' + a.id + '/' + b.id); })); });
     const seen = new Set();
     P.wires.forEach((w) => [w.a, w.b].forEach((e) => { if (e.dev) { const k = keyOf(e); if (!seen.has(k)) { seen.add(k); if (usedAt(P, k) > 2) errs.push('over:' + k); } } }));
     return errs;
   }
 
-  S.edCore = { artOf, faceOf, devName, elements, usedAt, styleOf, exitDir, WN, VIEW, nextWireNum, numberWires, wireLen, WCOL, wireColor, MARK, endName, journal, autoStops, copyDevs, pasteDevs, ductH, pitchOf, railOp, placeBlock, fixCombs, faults, busBad, rcdFaults, ownClass, combGroups, G, PITCHES, PRESETS, PREFIX, COND_COL, FERRULE, SECTIONS, blank, sync, W, H, rowTop, railY, ductTop, devGeo, devH, terms, termNames, busW, busGeo, busSlot, busMaxX, busFree, busPlace, arrangeBuses, balanceBuses, feedCores, feedPt, lineCores, linePt, glandX, endInfo, route, pathLen, keyOf, nets, canWire, guessCond, checks, fromBuilder, bom, groups, nextId, fits, placeShift, placeInsert, resize, autoLine, renameDev, renumber, validate, spec, passPairs };
+  S.edCore = { rail, cap, zoneH, railOff, setRail, vert, TEMPLATES, template, artOf, faceOf, devName, elements, usedAt, styleOf, exitDir, WN, VIEW, nextWireNum, numberWires, wireLen, WCOL, wireColor, MARK, endName, journal, autoStops, copyDevs, pasteDevs, ductH, pitchOf, railOp, placeBlock, fixCombs, faults, busBad, rcdFaults, ownClass, combGroups, G, PITCHES, PRESETS, PREFIX, COND_COL, FERRULE, SECTIONS, blank, sync, W, H, rowTop, railY, ductTop, devGeo, devH, terms, termNames, busW, busGeo, busSlot, busMaxX, busFree, busPlace, arrangeBuses, balanceBuses, feedCores, feedPt, lineCores, linePt, glandX, endInfo, route, pathLen, keyOf, nets, canWire, guessCond, checks, fromBuilder, bom, groups, nextId, fits, placeShift, placeInsert, resize, autoLine, renameDev, renumber, validate, spec, passPairs };
 })();
