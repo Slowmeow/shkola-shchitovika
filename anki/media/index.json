@@ -323,6 +323,30 @@
   "w": 628,
   "h": 304
  },
+ "shk-ill-gSystem.webp": {
+  "kind": "ill",
+  "key": "gSystem",
+  "w": 628,
+  "h": 338
+ },
+ "shk-ill-gAnatomy.webp": {
+  "kind": "ill",
+  "key": "gAnatomy",
+  "w": 628,
+  "h": 353
+ },
+ "shk-ill-g60364.webp": {
+  "kind": "ill",
+  "key": "g60364",
+  "w": 628,
+  "h": 385
+ },
+ "shk-ill-gMcbTests.webp": {
+  "kind": "ill",
+  "key": "gMcbTests",
+  "w": 628,
+  "h": 386
+ },
  "shk-sys-tnc.webp": {
   "kind": "sys",
   "key": "tnc",
